@@ -17,8 +17,8 @@ function colWidth(col: ColumnDef): number {
   return 180;
 }
 
-function totalTableWidth(columns: ColumnDef[]): number {
-  return 36 + columns.reduce((sum, col) => sum + colWidth(col), 0) + 32;
+function initialWidths(columns: ColumnDef[]): Record<string, number> {
+  return Object.fromEntries(columns.map((col) => [col.name, colWidth(col)]));
 }
 
 interface DataTableProps {
@@ -56,8 +56,14 @@ export function DataTable({
   const bodyRef = useRef<HTMLDivElement>(null);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => initialWidths(columns));
 
   useEffect(() => { setSelectedKeys(new Set()); }, [columns]);
+  useEffect(() => { setColumnWidths(initialWidths(columns)); }, [columns]);
+
+  function handleResizeColumn(name: string, width: number) {
+    setColumnWidths((prev) => ({ ...prev, [name]: width }));
+  }
 
   const pkCol = columns.find((c) => c.isPrimaryKey);
   function getRowKey(row: RecordRow): string {
@@ -101,12 +107,12 @@ export function DataTable({
     setSelectedKeys(new Set());
   }
 
-  const tableWidth = totalTableWidth(columns);
+  const tableWidth = 36 + columns.reduce((sum, col) => sum + (columnWidths[col.name] ?? colWidth(col)), 0) + 32;
   const colgroup = (
     <colgroup>
       <col style={{ width: 36 }} />
       {columns.map((col) => (
-        <col key={col.name} style={{ width: colWidth(col) }} />
+        <col key={col.name} style={{ width: columnWidths[col.name] ?? colWidth(col) }} />
       ))}
       <col style={{ width: 32 }} />
     </colgroup>
@@ -132,6 +138,8 @@ export function DataTable({
               allSelected={allSelected}
               someSelected={someSelected}
               onToggleAll={toggleAll}
+              columnWidths={columnWidths}
+              onResizeColumn={handleResizeColumn}
             />
           </table>
         </div>
