@@ -99,6 +99,23 @@ export default function App() {
     setDeletingRow(null);
   }, [selectedTable, deletingRow]);
 
+  const handleBulkDelete = useCallback((selectedRows: RecordRow[]) => {
+    if (!selectedTable) return;
+    const pkCol = selectedTable.columns.find((c) => c.isPrimaryKey);
+    setRecords((prev) => {
+      const next = new Map(prev);
+      const rows = prev.get(selectedTable.name) ?? [];
+      if (pkCol) {
+        const pks = new Set(selectedRows.map((r) => r[pkCol.name]));
+        next.set(selectedTable.name, rows.filter((r) => !pks.has(r[pkCol.name])));
+      } else {
+        const set = new Set(selectedRows);
+        next.set(selectedTable.name, rows.filter((r) => !set.has(r)));
+      }
+      return next;
+    });
+  }, [selectedTable]);
+
   const recordCounts = new Map(
     tables.map((t) => [t.name, records.get(t.name)?.length ?? 0])
   );
@@ -131,6 +148,7 @@ export default function App() {
               onAddRecord={() => setCreateOpen(true)}
               onEditRecord={(row) => { setEditingRow(row); setEditOpen(true); }}
               onDeleteRecord={(row) => { setDeletingRow(row); setDeleteOpen(true); }}
+              onBulkDelete={handleBulkDelete}
             />
             <RecordDialog
               mode="create"

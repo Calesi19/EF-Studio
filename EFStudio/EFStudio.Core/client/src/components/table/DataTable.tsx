@@ -1,7 +1,8 @@
 import { TableBody } from "@/components/ui/table";
 import { useTableState } from "@/hooks/useTableState";
 import type { ColumnDef, PaginationState, RecordRow, SortState } from "@/types";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { DeleteConfirmDialog } from "../records/DeleteConfirmDialog";
 import { DataTableHeader } from "./DataTableHeader";
 import { DataTablePagination } from "./DataTablePagination";
 import { DataTableRow } from "./DataTableRow";
@@ -29,6 +30,7 @@ interface DataTableProps {
   onAddRecord: () => void;
   onEditRecord: (row: RecordRow) => void;
   onDeleteRecord: (row: RecordRow) => void;
+  onBulkDelete: (rows: RecordRow[]) => void;
 }
 
 export function DataTable({
@@ -44,9 +46,19 @@ export function DataTable({
   onAddRecord,
   onEditRecord,
   onDeleteRecord,
+  onBulkDelete,
 }: DataTableProps) {
   const headerRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+
+  useEffect(() => { setSelectedKeys(new Set()); }, [columns]);
+
+  const pkCol = columns.find((c) => c.isPrimaryKey);
+  function getRowKey(row: RecordRow): string {
+    return pkCol ? String(row[pkCol.name]) : JSON.stringify(row);
+  }
 
   function syncHeaderScroll() {
     if (headerRef.current && bodyRef.current) {
@@ -54,16 +66,40 @@ export function DataTable({
     }
   }
 
-  const { paginatedRows, totalRows, totalPages } = useTableState(
-    rows,
-    columns,
-    filter,
-    sort,
-    pagination
-  );
+  const { paginatedRows, totalRows, totalPages } = useTableState(rows, columns, filter, sort, pagination);
+
+  const paginatedKeys = paginatedRows.map(getRowKey);
+  const allSelected = paginatedKeys.length > 0 && paginatedKeys.every((k) => selectedKeys.has(k));
+  const someSelected = paginatedKeys.some((k) => selectedKeys.has(k));
+
+  function toggleAll() {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        paginatedKeys.forEach((k) => next.delete(k));
+      } else {
+        paginatedKeys.forEach((k) => next.add(k));
+      }
+      return next;
+    });
+  }
+
+  function toggleRow(key: string) {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }
+
+  function handleBulkDeleteConfirm() {
+    onBulkDelete(rows.filter((r) => selectedKeys.has(getRowKey(r))));
+    setSelectedKeys(new Set());
+  }
 
   const colgroup = (
     <colgroup>
+      <col style={{ width: "36px" }} />
       {columns.map((col) => (
         <col key={col.name} style={{ width: colWidth(col) }} />
       ))}
@@ -75,14 +111,12 @@ export function DataTable({
     <div className="flex flex-1 flex-col overflow-hidden">
       <DataTableToolbar
         filter={filter}
-        onFilterChange={(v) => {
-          onFilterChange(v);
-          onPageChange(1);
-        }}
+        onFilterChange={(v) => { onFilterChange(v); onPageChange(1); }}
         onAddRecord={onAddRecord}
+        selectedCount={selectedKeys.size}
+        onBulkDelete={() => setBulkDeleteOpen(true)}
       />
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        {/* Fixed header — horizontally synced to body via ref */}
         <div ref={headerRef} className="shrink-0 overflow-hidden border-b border-border bg-muted">
           <table className="w-full table-fixed">
             {colgroup}
@@ -90,36 +124,37 @@ export function DataTable({
               columns={columns}
               sort={sort}
               onSortChange={onSortChange}
+              allSelected={allSelected}
+              someSelected={someSelected}
+              onToggleAll={toggleAll}
             />
           </table>
         </div>
-        {/* Scrollable body — drives horizontal scroll for both */}
         <div ref={bodyRef} className="flex-1 overflow-auto min-h-0" onScroll={syncHeaderScroll}>
           <table className="w-full table-fixed">
             {colgroup}
             <TableBody>
-                {paginatedRows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={columns.length + 1}
-                      className="py-16 text-center text-xs text-muted-foreground"
-                    >
-                      {filter ? "No records match your filter." : "No records found."}
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedRows.map((row, i) => (
-                    <DataTableRow
-                      key={i}
-                      row={row}
-                      columns={columns}
-                      onEdit={onEditRecord}
-                      onDelete={onDeleteRecord}
-                    />
-                  ))
-                )}
-              </TableBody>
-            </table>
+              {paginatedRows.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length + 2} className="py-16 text-center text-xs text-muted-foreground">
+                    {filter ? "No records match your filter." : "No records found."}
+                  </td>
+                </tr>
+              ) : (
+                paginatedRows.map((row, i) => (
+                  <DataTableRow
+                    key={i}
+                    row={row}
+                    columns={columns}
+                    isSelected={selectedKeys.has(getRowKey(row))}
+                    onToggleSelect={() => toggleRow(getRowKey(row))}
+                    onEdit={onEditRecord}
+                    onDelete={onDeleteRecord}
+                  />
+                ))
+              )}
+            </TableBody>
+          </table>
         </div>
       </div>
       <DataTablePagination
@@ -128,6 +163,12 @@ export function DataTable({
         totalPages={totalPages}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
+      />
+      <DeleteConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        count={selectedKeys.size}
+        onConfirm={handleBulkDeleteConfirm}
       />
     </div>
   );

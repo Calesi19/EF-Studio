@@ -13,16 +13,22 @@ interface DeleteConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
+  count?: number;
 }
 
-export function DeleteConfirmDialog({ open, onOpenChange, onConfirm }: DeleteConfirmDialogProps) {
+export function DeleteConfirmDialog({ open, onOpenChange, onConfirm, count }: DeleteConfirmDialogProps) {
+  const isBulk = count !== undefined && count > 1;
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete record?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {isBulk ? `Delete ${count} records?` : "Delete record?"}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. The record will be permanently removed.
+            {isBulk
+              ? `${count} records will be permanently removed. This action cannot be undone.`
+              : "This record will be permanently removed. This action cannot be undone."}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -31,7 +37,7 @@ export function DeleteConfirmDialog({ open, onOpenChange, onConfirm }: DeleteCon
             onClick={onConfirm}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            Delete
+            {isBulk ? `Delete ${count}` : "Delete"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
