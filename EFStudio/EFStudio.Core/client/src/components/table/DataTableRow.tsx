@@ -20,14 +20,14 @@ export function DataTableRow({ row, columns, onEdit, onDelete }: DataTableRowPro
   return (
     <TableRow className="hover:bg-muted/30 group">
       {columns.map((col) => (
-        <TableCell key={col.name} className="px-4 py-2 align-middle">
+        <TableCell key={col.name} className="px-3 py-1 align-middle">
           <DataTableCell value={row[col.name] ?? null} column={col} />
         </TableCell>
       ))}
-      <TableCell className="px-2 py-2 align-middle w-10">
+      <TableCell className="px-1 py-1 align-middle w-8">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="opacity-0 group-hover:opacity-100 flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-all text-sm">
+            <button className="opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-all text-xs">
               ⋯
             </button>
           </DropdownMenuTrigger>

@@ -15,14 +15,14 @@ export function Sidebar({ tables, recordCounts, selectedTableName, onSelectTable
   return (
     <div className="flex h-full flex-col">
       <SidebarHeader />
-      <div className="px-3 py-2">
-        <p className="px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+      <div className="px-3 py-1.5">
+        <p className="px-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
           Models
         </p>
       </div>
       <Separator className="bg-sidebar-border" />
-      <ScrollArea className="flex-1 py-2">
-        <div className="px-2 space-y-0.5">
+      <ScrollArea className="flex-1 py-1">
+        <div className="px-1.5 space-y-px">
           {tables.map((table) => (
             <TableListItem
               key={table.name}

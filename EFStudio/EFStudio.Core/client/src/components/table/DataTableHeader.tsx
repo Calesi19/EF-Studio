@@ -11,11 +11,11 @@ interface DataTableHeaderProps {
 export function DataTableHeader({ columns, sort, onSortChange }: DataTableHeaderProps) {
   return (
     <TableHeader>
-      <TableRow className="bg-muted/50 hover:bg-muted/50">
+      <TableRow className="bg-muted hover:bg-muted">
         {columns.map((col) => (
           <TableHead
             key={col.name}
-            className="cursor-pointer select-none whitespace-nowrap px-4 py-2"
+            className="cursor-pointer select-none whitespace-nowrap px-3 py-1.5 h-auto"
             onClick={() => onSortChange(col.name)}
           >
             <div className="flex items-center gap-1.5">
@@ -31,7 +31,7 @@ export function DataTableHeader({ columns, sort, onSortChange }: DataTableHeader
             </div>
           </TableHead>
         ))}
-        <TableHead className="w-10 px-2 py-2" />
+        <TableHead className="w-8 px-1 py-1.5 h-auto" />
       </TableRow>
     </TableHeader>
   );

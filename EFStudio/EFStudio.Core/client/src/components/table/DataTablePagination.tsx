@@ -29,7 +29,7 @@ export function DataTablePagination({
   const end = Math.min(pagination.page * pagination.pageSize, totalRows);
 
   return (
-    <div className="flex items-center justify-between border-t border-border px-6 py-3">
+    <div className="flex items-center justify-between border-t border-border px-4 py-1.5">
       <span className="text-xs text-muted-foreground">
         {totalRows === 0 ? "No records" : `${start}–${end} of ${totalRows.toLocaleString()} records`}
       </span>

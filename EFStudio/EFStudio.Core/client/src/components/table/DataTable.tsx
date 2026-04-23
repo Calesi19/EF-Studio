@@ -1,11 +1,19 @@
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Table, TableBody } from "@/components/ui/table";
+import { TableBody } from "@/components/ui/table";
 import { useTableState } from "@/hooks/useTableState";
 import type { ColumnDef, PaginationState, RecordRow, SortState } from "@/types";
 import { DataTableHeader } from "./DataTableHeader";
 import { DataTablePagination } from "./DataTablePagination";
 import { DataTableRow } from "./DataTableRow";
 import { DataTableToolbar } from "./DataTableToolbar";
+
+function colWidth(col: ColumnDef): string {
+  if (col.type === "boolean") return "72px";
+  if (col.type === "number") return "90px";
+  if (col.type === "datetime") return "160px";
+  if (col.type === "uuid" || col.isPrimaryKey || col.isForeignKey) return "155px";
+  if (col.type === "json") return "220px";
+  return "180px";
+}
 
 interface DataTableProps {
   columns: ColumnDef[];
@@ -44,6 +52,15 @@ export function DataTable({
     pagination
   );
 
+  const colgroup = (
+    <colgroup>
+      {columns.map((col) => (
+        <col key={col.name} style={{ width: colWidth(col) }} />
+      ))}
+      <col style={{ width: "32px" }} />
+    </colgroup>
+  );
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <DataTableToolbar
@@ -54,38 +71,49 @@ export function DataTable({
         }}
         onAddRecord={onAddRecord}
       />
-      <ScrollArea className="flex-1">
-        <Table>
-          <DataTableHeader
-            columns={columns}
-            sort={sort}
-            onSortChange={onSortChange}
-          />
-          <TableBody>
-            {paginatedRows.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={columns.length + 1}
-                  className="py-16 text-center text-sm text-muted-foreground"
-                >
-                  {filter ? "No records match your filter." : "No records found."}
-                </td>
-              </tr>
-            ) : (
-              paginatedRows.map((row, i) => (
-                <DataTableRow
-                  key={i}
-                  row={row}
-                  columns={columns}
-                  onEdit={onEditRecord}
-                  onDelete={onDeleteRecord}
-                />
-              ))
-            )}
-          </TableBody>
-        </Table>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+      <div className="flex-1 min-h-0 overflow-x-auto">
+        <div className="flex flex-col h-full">
+          {/* Fixed header — never scrolls */}
+          <div className="shrink-0 border-b border-border bg-muted">
+            <table className="w-full table-fixed">
+              {colgroup}
+              <DataTableHeader
+                columns={columns}
+                sort={sort}
+                onSortChange={onSortChange}
+              />
+            </table>
+          </div>
+          {/* Scrollable body */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <table className="w-full table-fixed">
+              {colgroup}
+              <TableBody>
+                {paginatedRows.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={columns.length + 1}
+                      className="py-16 text-center text-xs text-muted-foreground"
+                    >
+                      {filter ? "No records match your filter." : "No records found."}
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedRows.map((row, i) => (
+                    <DataTableRow
+                      key={i}
+                      row={row}
+                      columns={columns}
+                      onEdit={onEditRecord}
+                      onDelete={onDeleteRecord}
+                    />
+                  ))
+                )}
+              </TableBody>
+            </table>
+          </div>
+        </div>
+      </div>
       <DataTablePagination
         pagination={pagination}
         totalRows={totalRows}
