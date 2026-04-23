@@ -15,7 +15,7 @@ export function DataTableHeader({ columns, sort, onSortChange }: DataTableHeader
         {columns.map((col) => (
           <TableHead
             key={col.name}
-            className="cursor-pointer select-none whitespace-nowrap px-3 py-1.5 h-auto"
+            className="cursor-pointer select-none whitespace-nowrap px-3 py-1.5 h-auto border-r border-border"
             onClick={() => onSortChange(col.name)}
           >
             <div className="flex items-center gap-1.5">

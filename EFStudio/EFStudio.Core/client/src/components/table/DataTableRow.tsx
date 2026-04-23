@@ -20,7 +20,7 @@ export function DataTableRow({ row, columns, onEdit, onDelete }: DataTableRowPro
   return (
     <TableRow className="hover:bg-muted/30 group">
       {columns.map((col) => (
-        <TableCell key={col.name} className="px-3 py-1 align-middle">
+        <TableCell key={col.name} className="px-3 py-1 align-middle border-r border-border">
           <DataTableCell value={row[col.name] ?? null} column={col} />
         </TableCell>
       ))}

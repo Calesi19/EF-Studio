@@ -38,6 +38,10 @@ const postIds = [
   "aa000020-0000-0000-0000-000000000020",
 ];
 
+const orderIds = Array.from({ length: 15 }, (_, i) =>
+  `cc${String(i + 1).padStart(6, "0")}-0000-0000-0000-${String(i + 1).padStart(12, "0")}`
+);
+
 export const MOCK_TABLES: TableDef[] = [
   {
     name: "User",
@@ -121,6 +125,53 @@ export const MOCK_TABLES: TableDef[] = [
       { id: 13, name: "api", color: "#3A0CA3" },
       { id: 14, name: "csharp", color: "#4CC9F0" },
       { id: 15, name: "sql", color: "#B5838D" },
+    ],
+  },
+  {
+    name: "Order",
+    displayName: "Orders",
+    columns: [
+      { name: "id", type: "uuid", isPrimaryKey: true, isForeignKey: false, isNullable: false },
+      { name: "orderNumber", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
+      { name: "status", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
+      { name: "customerId", type: "uuid", isPrimaryKey: false, isForeignKey: true, isNullable: false, foreignKeyTable: "User" },
+      { name: "billingName", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
+      { name: "billingEmail", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
+      { name: "billingAddress", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
+      { name: "billingCity", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
+      { name: "billingCountry", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
+      { name: "billingZip", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
+      { name: "subtotal", type: "number", isPrimaryKey: false, isForeignKey: false, isNullable: false },
+      { name: "taxAmount", type: "number", isPrimaryKey: false, isForeignKey: false, isNullable: false },
+      { name: "discountAmount", type: "number", isPrimaryKey: false, isForeignKey: false, isNullable: true },
+      { name: "total", type: "number", isPrimaryKey: false, isForeignKey: false, isNullable: false },
+      { name: "currency", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
+      { name: "paymentMethod", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
+      { name: "paymentReference", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: true },
+      { name: "isPaid", type: "boolean", isPrimaryKey: false, isForeignKey: false, isNullable: false },
+      { name: "isShipped", type: "boolean", isPrimaryKey: false, isForeignKey: false, isNullable: false },
+      { name: "shippedAt", type: "datetime", isPrimaryKey: false, isForeignKey: false, isNullable: true },
+      { name: "deliveredAt", type: "datetime", isPrimaryKey: false, isForeignKey: false, isNullable: true },
+      { name: "notes", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: true },
+      { name: "createdAt", type: "datetime", isPrimaryKey: false, isForeignKey: false, isNullable: false },
+      { name: "updatedAt", type: "datetime", isPrimaryKey: false, isForeignKey: false, isNullable: false },
+    ],
+    rows: [
+      { id: orderIds[0], orderNumber: "ORD-00001", status: "delivered", customerId: userIds[0], billingName: "Alice Johnson", billingEmail: "alice@example.com", billingAddress: "123 Main St", billingCity: "New York", billingCountry: "US", billingZip: "10001", subtotal: 120.00, taxAmount: 10.80, discountAmount: null, total: 130.80, currency: "USD", paymentMethod: "card", paymentReference: "ch_abc123", isPaid: true, isShipped: true, shippedAt: "2024-02-01T09:00:00", deliveredAt: "2024-02-04T14:00:00", notes: null, createdAt: "2024-01-30T10:00:00", updatedAt: "2024-02-04T14:00:00" },
+      { id: orderIds[1], orderNumber: "ORD-00002", status: "shipped", customerId: userIds[1], billingName: "Bob Smith", billingEmail: "bob@example.com", billingAddress: "456 Oak Ave", billingCity: "Chicago", billingCountry: "US", billingZip: "60601", subtotal: 89.99, taxAmount: 8.10, discountAmount: 5.00, total: 93.09, currency: "USD", paymentMethod: "paypal", paymentReference: "pp_xyz789", isPaid: true, isShipped: true, shippedAt: "2024-02-10T11:00:00", deliveredAt: null, notes: "Leave at door", createdAt: "2024-02-08T15:00:00", updatedAt: "2024-02-10T11:00:00" },
+      { id: orderIds[2], orderNumber: "ORD-00003", status: "processing", customerId: userIds[2], billingName: "Carol White", billingEmail: "carol@example.com", billingAddress: "789 Pine Rd", billingCity: "Los Angeles", billingCountry: "US", billingZip: "90001", subtotal: 250.00, taxAmount: 22.50, discountAmount: 25.00, total: 247.50, currency: "USD", paymentMethod: "card", paymentReference: "ch_def456", isPaid: true, isShipped: false, shippedAt: null, deliveredAt: null, notes: null, createdAt: "2024-02-15T08:30:00", updatedAt: "2024-02-15T08:30:00" },
+      { id: orderIds[3], orderNumber: "ORD-00004", status: "pending", customerId: userIds[3], billingName: "David Brown", billingEmail: "david@example.com", billingAddress: "321 Elm St", billingCity: "Houston", billingCountry: "US", billingZip: "77001", subtotal: 45.00, taxAmount: 4.05, discountAmount: null, total: 49.05, currency: "USD", paymentMethod: "card", paymentReference: null, isPaid: false, isShipped: false, shippedAt: null, deliveredAt: null, notes: "Call before delivery", createdAt: "2024-02-20T12:00:00", updatedAt: "2024-02-20T12:00:00" },
+      { id: orderIds[4], orderNumber: "ORD-00005", status: "delivered", customerId: userIds[4], billingName: "Eva Martinez", billingEmail: "eva@example.com", billingAddress: "654 Maple Dr", billingCity: "Phoenix", billingCountry: "US", billingZip: "85001", subtotal: 310.50, taxAmount: 27.95, discountAmount: 31.05, total: 307.40, currency: "USD", paymentMethod: "card", paymentReference: "ch_ghi012", isPaid: true, isShipped: true, shippedAt: "2024-03-02T10:00:00", deliveredAt: "2024-03-05T16:00:00", notes: null, createdAt: "2024-03-01T09:00:00", updatedAt: "2024-03-05T16:00:00" },
+      { id: orderIds[5], orderNumber: "ORD-00006", status: "cancelled", customerId: userIds[5], billingName: "Frank Lee", billingEmail: "frank@example.com", billingAddress: "987 Cedar Ln", billingCity: "Philadelphia", billingCountry: "US", billingZip: "19101", subtotal: 75.00, taxAmount: 6.75, discountAmount: null, total: 81.75, currency: "USD", paymentMethod: "paypal", paymentReference: "pp_jkl345", isPaid: false, isShipped: false, shippedAt: null, deliveredAt: null, notes: "Cancelled by customer", createdAt: "2024-03-10T14:00:00", updatedAt: "2024-03-11T09:00:00" },
+      { id: orderIds[6], orderNumber: "ORD-00007", status: "delivered", customerId: userIds[6], billingName: "Grace Kim", billingEmail: "grace@example.com", billingAddress: "147 Birch Blvd", billingCity: "San Antonio", billingCountry: "US", billingZip: "78201", subtotal: 199.99, taxAmount: 18.00, discountAmount: 20.00, total: 197.99, currency: "USD", paymentMethod: "card", paymentReference: "ch_mno678", isPaid: true, isShipped: true, shippedAt: "2024-03-18T08:00:00", deliveredAt: "2024-03-21T13:00:00", notes: null, createdAt: "2024-03-15T11:00:00", updatedAt: "2024-03-21T13:00:00" },
+      { id: orderIds[7], orderNumber: "ORD-00008", status: "processing", customerId: userIds[7], billingName: "Henry Wilson", billingEmail: "henry@example.com", billingAddress: "258 Walnut Way", billingCity: "San Diego", billingCountry: "US", billingZip: "92101", subtotal: 540.00, taxAmount: 48.60, discountAmount: null, total: 588.60, currency: "USD", paymentMethod: "bank_transfer", paymentReference: "bt_pqr901", isPaid: true, isShipped: false, shippedAt: null, deliveredAt: null, notes: "Fragile items", createdAt: "2024-03-25T16:00:00", updatedAt: "2024-03-25T16:00:00" },
+      { id: orderIds[8], orderNumber: "ORD-00009", status: "delivered", customerId: userIds[8], billingName: "Iris Chen", billingEmail: "iris@example.com", billingAddress: "369 Spruce St", billingCity: "Dallas", billingCountry: "US", billingZip: "75201", subtotal: 62.50, taxAmount: 5.63, discountAmount: 6.25, total: 61.88, currency: "USD", paymentMethod: "card", paymentReference: "ch_stu234", isPaid: true, isShipped: true, shippedAt: "2024-04-05T09:00:00", deliveredAt: "2024-04-08T12:00:00", notes: null, createdAt: "2024-04-03T10:00:00", updatedAt: "2024-04-08T12:00:00" },
+      { id: orderIds[9], orderNumber: "ORD-00010", status: "refunded", customerId: userIds[9], billingName: "Jack Taylor", billingEmail: "jack@example.com", billingAddress: "741 Poplar Pl", billingCity: "San Jose", billingCountry: "US", billingZip: "95101", subtotal: 149.00, taxAmount: 13.41, discountAmount: null, total: 162.41, currency: "USD", paymentMethod: "card", paymentReference: "ch_vwx567", isPaid: true, isShipped: true, shippedAt: "2024-04-12T07:00:00", deliveredAt: "2024-04-15T11:00:00", notes: "Refund requested - wrong item", createdAt: "2024-04-10T13:00:00", updatedAt: "2024-04-18T10:00:00" },
+      { id: orderIds[10], orderNumber: "ORD-00011", status: "delivered", customerId: userIds[10], billingName: "Karen Davis", billingEmail: "karen@example.com", billingAddress: "852 Ash Ave", billingCity: "Austin", billingCountry: "US", billingZip: "73301", subtotal: 399.00, taxAmount: 35.91, discountAmount: 40.00, total: 394.91, currency: "USD", paymentMethod: "card", paymentReference: "ch_yza890", isPaid: true, isShipped: true, shippedAt: "2024-05-03T08:00:00", deliveredAt: "2024-05-06T15:00:00", notes: null, createdAt: "2024-05-01T09:00:00", updatedAt: "2024-05-06T15:00:00" },
+      { id: orderIds[11], orderNumber: "ORD-00012", status: "shipped", customerId: userIds[11], billingName: "Liam Garcia", billingEmail: "liam@example.com", billingAddress: "963 Cherry Ct", billingCity: "Jacksonville", billingCountry: "US", billingZip: "32099", subtotal: 88.00, taxAmount: 7.92, discountAmount: null, total: 95.92, currency: "USD", paymentMethod: "paypal", paymentReference: "pp_bcd123", isPaid: true, isShipped: true, shippedAt: "2024-05-20T10:00:00", deliveredAt: null, notes: null, createdAt: "2024-05-18T14:00:00", updatedAt: "2024-05-20T10:00:00" },
+      { id: orderIds[12], orderNumber: "ORD-00013", status: "pending", customerId: userIds[0], billingName: "Alice Johnson", billingEmail: "alice@example.com", billingAddress: "123 Main St", billingCity: "New York", billingCountry: "US", billingZip: "10001", subtotal: 215.00, taxAmount: 19.35, discountAmount: null, total: 234.35, currency: "USD", paymentMethod: "card", paymentReference: null, isPaid: false, isShipped: false, shippedAt: null, deliveredAt: null, notes: null, createdAt: "2024-06-01T11:00:00", updatedAt: "2024-06-01T11:00:00" },
+      { id: orderIds[13], orderNumber: "ORD-00014", status: "processing", customerId: userIds[2], billingName: "Carol White", billingEmail: "carol@example.com", billingAddress: "789 Pine Rd", billingCity: "Los Angeles", billingCountry: "US", billingZip: "90001", subtotal: 670.00, taxAmount: 60.30, discountAmount: 67.00, total: 663.30, currency: "USD", paymentMethod: "bank_transfer", paymentReference: "bt_efg456", isPaid: true, isShipped: false, shippedAt: null, deliveredAt: null, notes: "Business order", createdAt: "2024-06-10T09:00:00", updatedAt: "2024-06-10T09:00:00" },
+      { id: orderIds[14], orderNumber: "ORD-00015", status: "delivered", customerId: userIds[4], billingName: "Eva Martinez", billingEmail: "eva@example.com", billingAddress: "654 Maple Dr", billingCity: "Phoenix", billingCountry: "US", billingZip: "85001", subtotal: 33.00, taxAmount: 2.97, discountAmount: null, total: 35.97, currency: "USD", paymentMethod: "card", paymentReference: "ch_hij789", isPaid: true, isShipped: true, shippedAt: "2024-06-18T08:00:00", deliveredAt: "2024-06-20T14:00:00", notes: null, createdAt: "2024-06-15T10:00:00", updatedAt: "2024-06-20T14:00:00" },
     ],
   },
   {
