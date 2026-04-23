@@ -1,13 +1,13 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppShell } from "@/components/layout/AppShell";
-import { AppHeader } from "@/components/layout/AppHeader";
+import { TabBar } from "@/components/layout/TabBar";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { DataTable } from "@/components/table/DataTable";
 import { RecordDialog } from "@/components/records/RecordDialog";
 import { DeleteConfirmDialog } from "@/components/records/DeleteConfirmDialog";
 import { MOCK_TABLES } from "@/data/mock";
-import type { PaginationState, RecordRow, SortState } from "@/types";
+import type { PaginationState, RecordRow, SortState, TabState } from "@/types";
 
 const DEFAULT_SORT: SortState = { column: null, direction: "asc" };
 const DEFAULT_PAGINATION: PaginationState = { page: 1, pageSize: 10 };
@@ -23,10 +23,8 @@ function initRecords() {
 export default function App() {
   const tables = MOCK_TABLES;
   const [records, setRecords] = useState<Map<string, RecordRow[]>>(initRecords);
-  const [selectedTableName, setSelectedTableName] = useState<string | null>(tables[0]?.name ?? null);
-  const [filter, setFilter] = useState("");
-  const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
-  const [pagination, setPagination] = useState<PaginationState>(DEFAULT_PAGINATION);
+  const [tabs, setTabs] = useState<TabState[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -34,72 +32,103 @@ export default function App() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletingRow, setDeletingRow] = useState<RecordRow | null>(null);
 
-  const selectedTable = tables.find((t) => t.name === selectedTableName) ?? null;
-  const currentRows = selectedTableName ? (records.get(selectedTableName) ?? []) : [];
+  const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
+  const selectedTable = activeTab ? (tables.find((t) => t.name === activeTab.tableName) ?? null) : null;
+  const currentRows = selectedTable ? (records.get(selectedTable.name) ?? []) : [];
+
+  function updateActiveTab(updates: Partial<Pick<TabState, "filter" | "sort" | "pagination">>) {
+    if (!activeTabId) return;
+    setTabs((prev) => prev.map((t) => (t.id === activeTabId ? { ...t, ...updates } : t)));
+  }
 
   function handleSelectTable(name: string) {
-    setSelectedTableName(name);
-    setFilter("");
-    setSort(DEFAULT_SORT);
-    setPagination(DEFAULT_PAGINATION);
+    const existing = tabs.find((t) => t.tableName === name);
+    if (existing) {
+      setActiveTabId(existing.id);
+    } else {
+      const id = crypto.randomUUID();
+      setTabs((prev) => [...prev, {
+        id,
+        tableName: name,
+        filter: "",
+        sort: DEFAULT_SORT,
+        pagination: DEFAULT_PAGINATION,
+      }]);
+      setActiveTabId(id);
+    }
+  }
+
+  function handleCloseTab(id: string) {
+    setTabs((prev) => {
+      const idx = prev.findIndex((t) => t.id === id);
+      const next = prev.filter((t) => t.id !== id);
+      if (id === activeTabId) {
+        setActiveTabId(next.length > 0 ? next[Math.min(idx, next.length - 1)].id : null);
+      }
+      return next;
+    });
+  }
+
+  function handleCloseAll() {
+    setTabs([]);
+    setActiveTabId(null);
   }
 
   function handleSortChange(column: string) {
-    setSort((prev) => {
-      if (prev.column === column) {
-        if (prev.direction === "asc") return { column, direction: "desc" };
-        return { column: null, direction: "asc" };
-      }
-      return { column, direction: "asc" };
-    });
-    setPagination((p) => ({ ...p, page: 1 }));
+    if (!activeTab) return;
+    const { sort } = activeTab;
+    let newSort: SortState;
+    if (sort.column === column) {
+      newSort = sort.direction === "asc"
+        ? { column, direction: "desc" }
+        : { column: null, direction: "asc" };
+    } else {
+      newSort = { column, direction: "asc" };
+    }
+    updateActiveTab({ sort: newSort, pagination: { ...activeTab.pagination, page: 1 } });
   }
 
-  const handleCreateRecord = useCallback((row: RecordRow) => {
-    if (!selectedTableName) return;
+  function handleCreateRecord(row: RecordRow) {
+    if (!selectedTable) return;
     setRecords((prev) => {
       const next = new Map(prev);
-      next.set(selectedTableName, [...(prev.get(selectedTableName) ?? []), row]);
+      next.set(selectedTable.name, [...(prev.get(selectedTable.name) ?? []), row]);
       return next;
     });
-  }, [selectedTableName]);
+  }
 
-  const handleUpdateRecord = useCallback((row: RecordRow) => {
+  function handleUpdateRecord(row: RecordRow) {
     if (!selectedTable) return;
     const pkCol = selectedTable.columns.find((c) => c.isPrimaryKey);
     setRecords((prev) => {
       const next = new Map(prev);
       const rows = prev.get(selectedTable.name) ?? [];
-      if (pkCol) {
-        next.set(
-          selectedTable.name,
-          rows.map((r) => (r[pkCol.name] === row[pkCol.name] ? row : r))
-        );
-      }
+      next.set(
+        selectedTable.name,
+        pkCol ? rows.map((r) => (r[pkCol.name] === row[pkCol.name] ? row : r)) : rows
+      );
       return next;
     });
-  }, [selectedTable]);
+  }
 
-  const handleDeleteRecord = useCallback(() => {
+  function handleDeleteRecord() {
     if (!selectedTable || !deletingRow) return;
     const pkCol = selectedTable.columns.find((c) => c.isPrimaryKey);
     setRecords((prev) => {
       const next = new Map(prev);
       const rows = prev.get(selectedTable.name) ?? [];
-      if (pkCol) {
-        next.set(
-          selectedTable.name,
-          rows.filter((r) => r[pkCol.name] !== deletingRow[pkCol.name])
-        );
-      } else {
-        next.set(selectedTable.name, rows.filter((r) => r !== deletingRow));
-      }
+      next.set(
+        selectedTable.name,
+        pkCol
+          ? rows.filter((r) => r[pkCol.name] !== deletingRow[pkCol.name])
+          : rows.filter((r) => r !== deletingRow)
+      );
       return next;
     });
     setDeletingRow(null);
-  }, [selectedTable, deletingRow]);
+  }
 
-  const handleBulkDelete = useCallback((selectedRows: RecordRow[]) => {
+  function handleBulkDelete(selectedRows: RecordRow[]) {
     if (!selectedTable) return;
     const pkCol = selectedTable.columns.find((c) => c.isPrimaryKey);
     setRecords((prev) => {
@@ -114,11 +143,9 @@ export default function App() {
       }
       return next;
     });
-  }, [selectedTable]);
+  }
 
-  const recordCounts = new Map(
-    tables.map((t) => [t.name, records.get(t.name)?.length ?? 0])
-  );
+  const recordCounts = new Map(tables.map((t) => [t.name, records.get(t.name)?.length ?? 0]));
 
   return (
     <TooltipProvider>
@@ -127,24 +154,33 @@ export default function App() {
           <Sidebar
             tables={tables}
             recordCounts={recordCounts}
-            selectedTableName={selectedTableName}
+            selectedTableName={activeTab?.tableName ?? null}
             onSelectTable={handleSelectTable}
           />
         }
       >
-        {selectedTable ? (
+        <TabBar
+          tabs={tabs}
+          activeTabId={activeTabId}
+          tables={tables}
+          recordCounts={recordCounts}
+          onActivate={setActiveTabId}
+          onClose={handleCloseTab}
+          onCloseAll={handleCloseAll}
+        />
+        {selectedTable && activeTab ? (
           <>
-            <AppHeader tableName={selectedTable.displayName} rowCount={currentRows.length} />
             <DataTable
+              key={activeTab.id}
               columns={selectedTable.columns}
               rows={currentRows}
-              filter={filter}
-              sort={sort}
-              pagination={pagination}
-              onFilterChange={setFilter}
+              filter={activeTab.filter}
+              sort={activeTab.sort}
+              pagination={activeTab.pagination}
+              onFilterChange={(filter) => updateActiveTab({ filter })}
               onSortChange={handleSortChange}
-              onPageChange={(page) => setPagination((p) => ({ ...p, page }))}
-              onPageSizeChange={(pageSize) => setPagination({ page: 1, pageSize })}
+              onPageChange={(page) => updateActiveTab({ pagination: { ...activeTab.pagination, page } })}
+              onPageSizeChange={(pageSize) => updateActiveTab({ pagination: { page: 1, pageSize } })}
               onAddRecord={() => setCreateOpen(true)}
               onEditRecord={(row) => { setEditingRow(row); setEditOpen(true); }}
               onDeleteRecord={(row) => { setDeletingRow(row); setDeleteOpen(true); }}
@@ -176,8 +212,8 @@ export default function App() {
             />
           </>
         ) : (
-          <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
-            Select a table from the sidebar.
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
+            <p className="text-sm">Open a model from the sidebar to get started.</p>
           </div>
         )}
       </AppShell>

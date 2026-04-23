@@ -35,3 +35,11 @@ export interface PaginationState {
   page: number;
   pageSize: number;
 }
+
+export interface TabState {
+  id: string;
+  tableName: string;
+  filter: string;
+  sort: SortState;
+  pagination: PaginationState;
+}
