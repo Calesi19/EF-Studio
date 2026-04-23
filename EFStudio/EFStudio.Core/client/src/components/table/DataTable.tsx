@@ -8,13 +8,17 @@ import { DataTablePagination } from "./DataTablePagination";
 import { DataTableRow } from "./DataTableRow";
 import { DataTableToolbar } from "./DataTableToolbar";
 
-function colWidth(col: ColumnDef): string {
-  if (col.type === "boolean") return "72px";
-  if (col.type === "number") return "90px";
-  if (col.type === "datetime") return "160px";
-  if (col.type === "uuid" || col.isPrimaryKey || col.isForeignKey) return "155px";
-  if (col.type === "json") return "220px";
-  return "180px";
+function colWidth(col: ColumnDef): number {
+  if (col.type === "boolean") return 72;
+  if (col.type === "number") return 90;
+  if (col.type === "datetime") return 160;
+  if (col.type === "uuid" || col.isPrimaryKey || col.isForeignKey) return 155;
+  if (col.type === "json") return 220;
+  return 180;
+}
+
+function totalTableWidth(columns: ColumnDef[]): number {
+  return 36 + columns.reduce((sum, col) => sum + colWidth(col), 0) + 32;
 }
 
 interface DataTableProps {
@@ -97,13 +101,14 @@ export function DataTable({
     setSelectedKeys(new Set());
   }
 
+  const tableWidth = totalTableWidth(columns);
   const colgroup = (
     <colgroup>
-      <col style={{ width: "36px" }} />
+      <col style={{ width: 36 }} />
       {columns.map((col) => (
         <col key={col.name} style={{ width: colWidth(col) }} />
       ))}
-      <col style={{ width: "32px" }} />
+      <col style={{ width: 32 }} />
     </colgroup>
   );
 
@@ -118,7 +123,7 @@ export function DataTable({
       />
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         <div ref={headerRef} className="shrink-0 overflow-hidden border-b border-border bg-muted">
-          <table className="w-full table-fixed">
+          <table className="table-fixed" style={{ minWidth: tableWidth, width: tableWidth }}>
             {colgroup}
             <DataTableHeader
               columns={columns}
@@ -131,7 +136,7 @@ export function DataTable({
           </table>
         </div>
         <div ref={bodyRef} className="flex-1 overflow-auto min-h-0" onScroll={syncHeaderScroll}>
-          <table className="w-full table-fixed">
+          <table className="table-fixed" style={{ minWidth: tableWidth, width: tableWidth }}>
             {colgroup}
             <TableBody>
               {paginatedRows.length === 0 ? (

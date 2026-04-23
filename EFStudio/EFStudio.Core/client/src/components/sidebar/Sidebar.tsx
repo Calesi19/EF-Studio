@@ -3,6 +3,7 @@ import { Separator } from "@/components/ui/separator";
 import type { TableDef } from "@/types";
 import { SidebarHeader } from "./SidebarHeader";
 import { TableListItem } from "./TableListItem";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface SidebarProps {
   tables: TableDef[];
@@ -35,6 +36,10 @@ export function Sidebar({ tables, recordCounts, selectedTableName, onSelectTable
           ))}
         </div>
       </ScrollArea>
+      <Separator className="bg-sidebar-border" />
+      <div className="px-1.5 py-1.5">
+        <ThemeToggle />
+      </div>
     </div>
   );
 }
