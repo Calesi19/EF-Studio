@@ -79,7 +79,7 @@ export function DataTableHeader({
             onClick={() => onSortChange(col.name)}
           >
             <div className="flex items-center gap-1.5 min-w-0 overflow-hidden pr-1">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide truncate min-w-0">
+              <span className="text-xs font-medium text-muted-foreground truncate min-w-0">
                 {col.name}
               </span>
               <ColumnTypeBadge column={col} />
