@@ -6,6 +6,14 @@ interface DataTableCellProps {
   column: ColumnDef;
 }
 
+function formatDatetime(raw: string): string {
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return raw;
+  const date = d.toISOString().slice(0, 10);
+  const time = d.toISOString().slice(11, 16);
+  return `${date} ${time}`;
+}
+
 export function DataTableCell({ value, column }: DataTableCellProps) {
   if (value === null || value === undefined) {
     return <span className="text-muted-foreground italic text-xs">null</span>;
@@ -13,36 +21,37 @@ export function DataTableCell({ value, column }: DataTableCellProps) {
 
   if (column.type === "boolean") {
     return value ? (
-      <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-mono text-xs" variant="outline">
+      <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-mono text-xs shrink-0" variant="outline">
         true
       </Badge>
     ) : (
-      <Badge className="text-muted-foreground font-mono text-xs" variant="outline">
+      <Badge className="text-muted-foreground font-mono text-xs shrink-0" variant="outline">
         false
       </Badge>
     );
   }
 
-  if (column.isPrimaryKey) {
+  if (column.isPrimaryKey || column.isForeignKey) {
+    const colorClass = column.isPrimaryKey
+      ? "text-primary"
+      : "text-blue-600 dark:text-blue-400";
     return (
-      <span className="font-mono text-xs text-primary truncate block max-w-[160px]" title={String(value)}>
-        {String(value)}
-      </span>
-    );
-  }
-
-  if (column.isForeignKey) {
-    return (
-      <span className="font-mono text-xs text-blue-600 dark:text-blue-400 truncate block max-w-[160px]" title={String(value)}>
+      <span
+        className={`font-mono text-xs ${colorClass} truncate block w-full`}
+        title={String(value)}
+      >
         {String(value)}
       </span>
     );
   }
 
   if (column.type === "datetime") {
-    const date = new Date(String(value));
-    const formatted = isNaN(date.getTime()) ? String(value) : date.toLocaleString();
-    return <span className="text-xs tabular-nums text-muted-foreground">{formatted}</span>;
+    const formatted = formatDatetime(String(value));
+    return (
+      <span className="text-xs tabular-nums text-muted-foreground truncate block w-full" title={formatted}>
+        {formatted}
+      </span>
+    );
   }
 
   if (column.type === "number") {
@@ -50,7 +59,7 @@ export function DataTableCell({ value, column }: DataTableCellProps) {
   }
 
   return (
-    <span className="text-xs truncate block max-w-[240px]" title={String(value)}>
+    <span className="text-xs truncate block w-full" title={String(value)}>
       {String(value)}
     </span>
   );

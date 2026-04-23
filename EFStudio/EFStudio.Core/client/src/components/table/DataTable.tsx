@@ -1,6 +1,7 @@
 import { TableBody } from "@/components/ui/table";
 import { useTableState } from "@/hooks/useTableState";
 import type { ColumnDef, PaginationState, RecordRow, SortState } from "@/types";
+import { useRef } from "react";
 import { DataTableHeader } from "./DataTableHeader";
 import { DataTablePagination } from "./DataTablePagination";
 import { DataTableRow } from "./DataTableRow";
@@ -44,6 +45,15 @@ export function DataTable({
   onEditRecord,
   onDeleteRecord,
 }: DataTableProps) {
+  const headerRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  function syncHeaderScroll() {
+    if (headerRef.current && bodyRef.current) {
+      headerRef.current.scrollLeft = bodyRef.current.scrollLeft;
+    }
+  }
+
   const { paginatedRows, totalRows, totalPages } = useTableState(
     rows,
     columns,
@@ -71,24 +81,23 @@ export function DataTable({
         }}
         onAddRecord={onAddRecord}
       />
-      <div className="flex-1 min-h-0 overflow-x-auto">
-        <div className="flex flex-col h-full">
-          {/* Fixed header — never scrolls */}
-          <div className="shrink-0 border-b border-border bg-muted">
-            <table className="w-full table-fixed">
-              {colgroup}
-              <DataTableHeader
-                columns={columns}
-                sort={sort}
-                onSortChange={onSortChange}
-              />
-            </table>
-          </div>
-          {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto min-h-0">
-            <table className="w-full table-fixed">
-              {colgroup}
-              <TableBody>
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        {/* Fixed header — horizontally synced to body via ref */}
+        <div ref={headerRef} className="shrink-0 overflow-hidden border-b border-border bg-muted">
+          <table className="w-full table-fixed">
+            {colgroup}
+            <DataTableHeader
+              columns={columns}
+              sort={sort}
+              onSortChange={onSortChange}
+            />
+          </table>
+        </div>
+        {/* Scrollable body — drives horizontal scroll for both */}
+        <div ref={bodyRef} className="flex-1 overflow-auto min-h-0" onScroll={syncHeaderScroll}>
+          <table className="w-full table-fixed">
+            {colgroup}
+            <TableBody>
                 {paginatedRows.length === 0 ? (
                   <tr>
                     <td
@@ -111,7 +120,6 @@ export function DataTable({
                 )}
               </TableBody>
             </table>
-          </div>
         </div>
       </div>
       <DataTablePagination
