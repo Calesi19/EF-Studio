@@ -19,7 +19,7 @@ export function TabBar({ tabs, activeTabId, tables, onActivate, onClose, onClose
   const { nameDisplay } = useStudioContext();
 
   return (
-    <div className="flex border-b border-border bg-muted/30 overflow-x-auto shrink-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="flex shrink-0 border-b border-border bg-muted/30 overflow-hidden">
       {tabs.length > 0 && (
         <button
           onClick={onToggleSidebar}
@@ -29,45 +29,50 @@ export function TabBar({ tabs, activeTabId, tables, onActivate, onClose, onClose
           <HugeiconsIcon icon={SidebarLeft01Icon} size={14} />
         </button>
       )}
-      {tabs.map((tab) => {
-        const table = tables.find((t) => t.key === tab.tableKey);
-        const isActive = tab.id === activeTabId;
-        const tabLabel = nameDisplay === "model" ? (table?.modelDisplayName ?? tab.tableKey) : (table?.name ?? tab.tableKey);
+      <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex min-w-max">
+          {tabs.map((tab) => {
+            const table = tables.find((t) => t.key === tab.tableKey);
+            const isActive = tab.id === activeTabId;
+            const tabLabel =
+              nameDisplay === "model" ? (table?.modelDisplayName ?? tab.tableKey) : (table?.name ?? tab.tableKey);
 
-        return (
-          <div
-            key={tab.id}
-            onClick={() => onActivate(tab.id)}
-            className={cn(
-              "group flex h-9 w-44 shrink-0 items-center gap-2 border-r border-border px-3 text-xs transition-colors cursor-pointer select-none",
-              isActive
-                ? "bg-background text-foreground font-medium"
-                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-            )}
-            title={tabLabel}
-          >
-            <span className="min-w-0 flex-1 truncate">{tabLabel}</span>
+            return (
+              <div
+                key={tab.id}
+                onClick={() => onActivate(tab.id)}
+                className={cn(
+                  "group flex h-9 w-44 shrink-0 items-center gap-2 border-r border-border px-3 text-xs transition-colors cursor-pointer select-none",
+                  isActive
+                    ? "bg-background text-foreground font-medium"
+                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                )}
+                title={tabLabel}
+              >
+                <span className="min-w-0 flex-1 truncate">{tabLabel}</span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onClose(tab.id); }}
+                  className={cn(
+                    "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors leading-none",
+                    isActive ? "opacity-50 hover:opacity-100" : "opacity-0 group-hover:opacity-50 hover:!opacity-100"
+                  )}
+                  tabIndex={-1}
+                >
+                  ×
+                </button>
+              </div>
+            );
+          })}
+          {tabs.length >= 2 && (
             <button
-              onClick={(e) => { e.stopPropagation(); onClose(tab.id); }}
-              className={cn(
-                "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors leading-none",
-                isActive ? "opacity-50 hover:opacity-100" : "opacity-0 group-hover:opacity-50 hover:!opacity-100"
-              )}
-              tabIndex={-1}
+              onClick={onCloseAll}
+              className="flex h-9 shrink-0 items-center gap-1 border-r border-border px-3 text-xs font-normal text-muted-foreground transition-colors select-none hover:bg-muted/50 hover:text-foreground"
             >
-              ×
+              Close all
             </button>
-          </div>
-        );
-      })}
-      {tabs.length >= 2 && (
-        <button
-          onClick={onCloseAll}
-          className="flex items-center gap-1 px-3 shrink-0 border-r border-border text-xs font-normal text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors h-9 select-none"
-        >
-          Close all
-        </button>
-      )}
+          )}
+        </div>
+      </div>
     </div>
   );
 }
