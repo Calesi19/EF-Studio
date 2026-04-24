@@ -24,6 +24,7 @@ export interface TableDef {
   name: string;
   schema?: string;
   displayName: string;
+  modelDisplayName: string;
   columns: ColumnDef[];
   rows: RecordRow[];
 }

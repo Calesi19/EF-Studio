@@ -7,6 +7,7 @@ export interface SchemaTable {
   name: string;
   schema?: string;
   displayName: string;
+  modelDisplayName: string;
   columns: ColumnDef[];
 }
 
@@ -22,6 +23,7 @@ interface ApiColumnInfo {
 interface ApiTableInfo {
   key: string;
   name: string;
+  modelName: string;
   schema?: string | null;
   columns: ApiColumnInfo[];
 }
@@ -95,6 +97,7 @@ export async function fetchSchema(signal?: AbortSignal): Promise<SchemaTable[]> 
     name: table.name,
     schema: table.schema ?? undefined,
     displayName: getTableDisplayName(table.name, table.schema ?? undefined),
+    modelDisplayName: toDisplayName(table.modelName),
     columns: table.columns.map(normalizeColumn),
   }));
 }

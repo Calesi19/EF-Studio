@@ -20,6 +20,7 @@ public class SchemaService
             .Select(entityType =>
             {
                 var tableName = entityType.GetTableName() ?? entityType.DisplayName();
+                var modelName = entityType.DisplayName();
                 var schema = entityType.GetSchema();
                 var tableIdentifier = StoreObjectIdentifier.Table(tableName, schema);
                 var tableKey = TableKeyFactory.Create(schema, tableName);
@@ -27,6 +28,7 @@ public class SchemaService
                 return new TableInfoContract(
                     tableKey,
                     tableName,
+                    modelName,
                     schema,
                     entityType
                         .GetProperties()

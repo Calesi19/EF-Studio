@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import type { TabState, TableDef } from "@/types";
 import { SidebarLeft01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { useStudioContext } from "@/pages/StudioPage/context/StudioContext";
 
 interface TabBarProps {
   tabs: TabState[];
@@ -15,6 +16,8 @@ interface TabBarProps {
 }
 
 export function TabBar({ tabs, activeTabId, tables, onActivate, onClose, onCloseAll, sidebarOpen, onToggleSidebar }: TabBarProps) {
+  const { nameDisplay } = useStudioContext();
+
   return (
     <div className="flex border-b border-border bg-muted/30 overflow-x-auto shrink-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {tabs.length > 0 && (
@@ -41,7 +44,7 @@ export function TabBar({ tabs, activeTabId, tables, onActivate, onClose, onClose
                 : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
             )}
           >
-            <span>{table?.displayName ?? tab.tableKey}</span>
+            <span>{nameDisplay === "model" ? (table?.modelDisplayName ?? tab.tableKey) : (table?.name ?? tab.tableKey)}</span>
             <button
               onClick={(e) => { e.stopPropagation(); onClose(tab.id); }}
               className={cn(

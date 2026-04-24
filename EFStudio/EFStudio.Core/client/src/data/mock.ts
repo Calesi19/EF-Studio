@@ -47,6 +47,7 @@ export const MOCK_TABLES: TableDef[] = [
     key: "User",
     name: "User",
     displayName: "Users",
+    modelDisplayName: "Users",
     columns: [
       { name: "id", type: "uuid", isPrimaryKey: true, isForeignKey: false, isNullable: false },
       { name: "name", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
@@ -73,6 +74,7 @@ export const MOCK_TABLES: TableDef[] = [
     key: "Post",
     name: "Post",
     displayName: "Posts",
+    modelDisplayName: "Posts",
     columns: [
       { name: "id", type: "uuid", isPrimaryKey: true, isForeignKey: false, isNullable: false },
       { name: "title", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
@@ -107,6 +109,7 @@ export const MOCK_TABLES: TableDef[] = [
     key: "Tag",
     name: "Tag",
     displayName: "Tags",
+    modelDisplayName: "Tags",
     columns: [
       { name: "id", type: "number", isPrimaryKey: true, isForeignKey: false, isNullable: false },
       { name: "name", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
@@ -134,6 +137,7 @@ export const MOCK_TABLES: TableDef[] = [
     key: "Order",
     name: "Order",
     displayName: "Orders",
+    modelDisplayName: "Orders",
     columns: [
       { name: "id", type: "uuid", isPrimaryKey: true, isForeignKey: false, isNullable: false },
       { name: "orderNumber", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
@@ -182,6 +186,7 @@ export const MOCK_TABLES: TableDef[] = [
     key: "PostTag",
     name: "PostTag",
     displayName: "Post Tags",
+    modelDisplayName: "Post Tags",
     columns: [
       { name: "postId", type: "uuid", isPrimaryKey: false, isForeignKey: true, isNullable: false, foreignKeyTable: "Post" },
       { name: "tagId", type: "number", isPrimaryKey: false, isForeignKey: true, isNullable: false, foreignKeyTable: "Tag" },

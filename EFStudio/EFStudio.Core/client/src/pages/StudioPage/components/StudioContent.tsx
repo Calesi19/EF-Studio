@@ -20,6 +20,7 @@ export function StudioContent() {
     effectiveSidebarOpen,
     error,
     loading,
+    nameDisplay,
     selectedTable,
     selectTable,
     setActiveTabId,
@@ -90,7 +91,7 @@ export function StudioContent() {
             {selectedTable && activeTab ? (
               activeTableError ? (
                 <StudioStatus
-                  title={`Failed to load ${selectedTable.displayName}`}
+                  title={`Failed to load ${nameDisplay === "model" ? selectedTable.modelDisplayName : selectedTable.name}`}
                   message={activeTableError}
                 />
               ) : activeTableLoading ? (

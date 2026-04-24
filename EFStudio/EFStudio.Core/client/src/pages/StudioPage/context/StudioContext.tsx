@@ -5,6 +5,7 @@ import { tableDataQueryOptions } from "@/api/data/fetchTableData";
 import { useSchema } from "@/api/schema/fetchSchema";
 import type { FieldValue, SortState, TableDef, TabState } from "@/types";
 import { DEFAULT_PAGE_NUMBER, DEFAULT_PAGE_SIZE, DEFAULT_SORT } from "@/pages/StudioPage/constants";
+import { useSettings, type NameDisplay } from "@/hooks/useSettings";
 
 const STORAGE_KEY_PAGE_SIZE = "ef-studio-page-size";
 
@@ -32,6 +33,8 @@ type StudioContextType = {
   changePage: (page: number) => void;
   changePageSize: (pageSize: number) => void;
   changeFilter: (filter: string) => void;
+  nameDisplay: NameDisplay;
+  setNameDisplay: (value: NameDisplay) => void;
 };
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -48,6 +51,7 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
   const [tabs, setTabs] = useState<TabState[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { nameDisplay, setNameDisplay } = useSettings();
   const [pageSize, setPageSize] = useState<number>(() => {
     const stored = localStorage.getItem(STORAGE_KEY_PAGE_SIZE);
     const parsed = stored ? Number(stored) : NaN;
@@ -73,7 +77,7 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
     const table = schema.find((t) => t.key === key);
 
     return query?.error && table
-      ? [{ tableKey: key, tableName: table.displayName, message: toErrorMessage(query.error) }]
+      ? [{ tableKey: key, tableName: nameDisplay === "model" ? table.modelDisplayName : table.name, message: toErrorMessage(query.error) }]
       : [];
   });
 
@@ -244,6 +248,8 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
         changePage,
         changePageSize,
         changeFilter,
+        nameDisplay,
+        setNameDisplay,
       }}
     >
       {children}
