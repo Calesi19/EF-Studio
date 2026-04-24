@@ -12,6 +12,12 @@ using Microsoft.Extensions.Logging.Abstractions;
 public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFixture<PostgresTestDatabase>
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly DateOnly CoverageDate = new(2026, 4, 24);
+    private static readonly TimeOnly CoverageTime = new(9, 45, 30);
+    private static readonly DateTimeOffset CoverageTimestamp = new(2026, 4, 24, 13, 15, 0, TimeSpan.Zero);
+    private static readonly Guid CoverageUuid = Guid.Parse("11111111-2222-3333-4444-555555555555");
+    private static readonly byte[] CoverageBinary = [1, 2, 3, 4, 5, 6];
+    private const string CoverageTableKey = "public.TypeCoverage";
 
     [Fact]
     public async Task SchemaService_ShouldExposeSchemaQualifiedTableKeys()
@@ -21,8 +27,7 @@ public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFix
             return;
         }
 
-        await database.Context.Database.EnsureDeletedAsync();
-        await database.Context.Database.EnsureCreatedAsync();
+        await ResetDatabaseAsync();
 
         database.Context.CrmUsers.Add(new CrmUser { Id = 1, Name = "Ada Lovelace" });
         database.Context.AuthUsers.Add(new AuthUser { Id = 1, Email = "ada@example.com" });
@@ -51,8 +56,7 @@ public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFix
             return;
         }
 
-        await database.Context.Database.EnsureDeletedAsync();
-        await database.Context.Database.EnsureCreatedAsync();
+        await ResetDatabaseAsync();
 
         database.Context.CrmUsers.Add(new CrmUser { Id = 7, Name = "Grace Hopper" });
         database.Context.AuthUsers.Add(new AuthUser { Id = 7, Email = "grace@example.com" });
@@ -88,8 +92,7 @@ public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFix
             return;
         }
 
-        await database.Context.Database.EnsureDeletedAsync();
-        await database.Context.Database.EnsureCreatedAsync();
+        await ResetDatabaseAsync();
 
         database.Context.CrmUsers.Add(new CrmUser { Id = 9, Name = "Katherine Johnson" });
         await database.Context.SaveChangesAsync();
@@ -133,6 +136,139 @@ public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFix
             "Katherine Johnson",
             GetJsonValue(tableData.Rows.Single(), "name", "Name").GetString()
         );
+    }
+
+    [Fact]
+    public async Task SchemaService_ShouldCoverEveryUniquePostgresColumnType()
+    {
+        if (!database.IsAvailable())
+        {
+            return;
+        }
+
+        await ResetDatabaseAsync();
+
+        database.Context.PostgresTypeCoverageRecords.Add(CreateCoverageRecord());
+        await database.Context.SaveChangesAsync();
+
+        var service = new SchemaService(NullLogger<SchemaService>.Instance);
+        var schema = service.GetSchema(database.Context);
+
+        var table = schema.Single(item => item.Key == CoverageTableKey);
+        var columns = table.Columns.ToDictionary(column => column.Name, column => column.DataType);
+
+        Assert.Equal("integer", columns["Id"]);
+        Assert.Equal("bigint", columns["BigIntValue"]);
+        Assert.Equal("boolean", columns["BooleanValue"]);
+        Assert.Equal("bytea", columns["BinaryValue"]);
+        Assert.Equal("character varying(80)", columns["VarcharValue"]);
+        Assert.Equal("date", columns["DateValue"]);
+        Assert.Equal("double precision", columns["DoubleValue"]);
+        Assert.Equal("integer", columns["IntValue"]);
+        Assert.Equal("jsonb", columns["JsonValue"]);
+        Assert.Equal("numeric(18,2)", columns["NumericValue"]);
+        Assert.Equal("real", columns["RealValue"]);
+        Assert.Equal("smallint", columns["SmallIntValue"]);
+        Assert.Equal("text", columns["TextValue"]);
+        Assert.Equal("time without time zone", columns["TimeValue"]);
+        Assert.Equal("timestamp with time zone", columns["TimestampValue"]);
+        Assert.Equal("uuid", columns["UuidValue"]);
+    }
+
+    [Fact]
+    public async Task Middleware_ShouldSerializeEveryUniquePostgresColumnType()
+    {
+        if (!database.IsAvailable())
+        {
+            return;
+        }
+
+        await ResetDatabaseAsync();
+
+        database.Context.PostgresTypeCoverageRecords.Add(CreateCoverageRecord());
+        await database.Context.SaveChangesAsync();
+
+        using var host = await new HostBuilder()
+            .ConfigureWebHost(webBuilder =>
+            {
+                webBuilder
+                    .UseTestServer()
+                    .ConfigureServices(services =>
+                    {
+                        services.AddDbContext<PostgresTestDbContext>(options =>
+                            options.UseNpgsql(database.ConnectionString));
+                        services.AddEFStudio<PostgresTestDbContext>();
+                    })
+                    .Configure(app => app.UseEFStudio());
+            })
+            .StartAsync();
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync($"/efstudio/api/data?table={CoverageTableKey}");
+
+        response.EnsureSuccessStatusCode();
+
+        var payload = await response.Content.ReadAsStringAsync();
+        var tableData = JsonSerializer.Deserialize<ApiTableDataResponse>(payload, JsonOptions);
+
+        Assert.NotNull(tableData);
+        var row = tableData.Rows.Single();
+
+        Assert.Equal(1, GetJsonValue(row, "id", "Id").GetInt32());
+        Assert.Equal(9_000_000_001L, GetJsonValue(row, "bigIntValue", "BigIntValue").GetInt64());
+        Assert.True(GetJsonValue(row, "booleanValue", "BooleanValue").GetBoolean());
+        Assert.Equal(Convert.ToBase64String(CoverageBinary), GetJsonValue(row, "binaryValue", "BinaryValue").GetString());
+        Assert.Equal("varchar sample", GetJsonValue(row, "varcharValue", "VarcharValue").GetString());
+        Assert.Equal("2026-04-24", GetJsonValue(row, "dateValue", "DateValue").GetString());
+        Assert.Equal(42.125d, GetJsonValue(row, "doubleValue", "DoubleValue").GetDouble(), 6);
+        Assert.Equal(73, GetJsonValue(row, "intValue", "IntValue").GetInt32());
+        var jsonValue = GetJsonValue(row, "jsonValue", "JsonValue").GetString();
+        Assert.NotNull(jsonValue);
+        using (var document = JsonDocument.Parse(jsonValue))
+        {
+            Assert.True(document.RootElement.GetProperty("flag").GetBoolean());
+            Assert.Equal("pg", document.RootElement.GetProperty("tags")[0].GetString());
+            Assert.Equal("jsonb", document.RootElement.GetProperty("tags")[1].GetString());
+        }
+        Assert.Equal(1234.56m, GetJsonValue(row, "numericValue", "NumericValue").GetDecimal());
+        Assert.Equal(7.5f, GetJsonValue(row, "realValue", "RealValue").GetSingle(), 3);
+        Assert.Equal(12, GetJsonValue(row, "smallIntValue", "SmallIntValue").GetInt16());
+        Assert.Equal("text sample", GetJsonValue(row, "textValue", "TextValue").GetString());
+        Assert.StartsWith("09:45:30", GetJsonValue(row, "timeValue", "TimeValue").GetString());
+        Assert.Equal("2026-04-24T13:15:00+00:00", GetJsonValue(row, "timestampValue", "TimestampValue").GetString());
+        Assert.Equal(CoverageUuid.ToString(), GetJsonValue(row, "uuidValue", "UuidValue").GetString());
+    }
+
+    private static PostgresTypeCoverageRecord CreateCoverageRecord()
+    {
+        return new PostgresTypeCoverageRecord
+        {
+            Id = 1,
+            BigIntValue = 9_000_000_001L,
+            BooleanValue = true,
+            BinaryValue = CoverageBinary,
+            VarcharValue = "varchar sample",
+            DateValue = CoverageDate,
+            DoubleValue = 42.125d,
+            IntValue = 73,
+            JsonValue = """{"flag":true,"tags":["pg","jsonb"]}""",
+            NumericValue = 1234.56m,
+            RealValue = 7.5f,
+            SmallIntValue = 12,
+            TextValue = "text sample",
+            TimeValue = CoverageTime,
+            TimestampValue = CoverageTimestamp,
+            UuidValue = CoverageUuid,
+        };
+    }
+
+    private async Task ResetDatabaseAsync()
+    {
+        database.Context.ChangeTracker.Clear();
+        await database.Context.Database.EnsureDeletedAsync();
+        database.Context.ChangeTracker.Clear();
+        await database.Context.Database.EnsureCreatedAsync();
+        database.Context.ChangeTracker.Clear();
     }
 
     private static JsonElement GetJsonValue(

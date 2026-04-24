@@ -163,7 +163,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(x => x.SerialNumber).HasMaxLength(60);
             entity.Property(x => x.AssetType).HasConversion<string>().HasMaxLength(20);
             entity.Property(x => x.PurchasePrice).HasPrecision(18, 2);
-            entity.Property(x => x.SpecificationsJson).HasColumnType("TEXT");
+            entity.Property(x => x.SpecificationsJson).HasColumnType("jsonb");
         });
 
         modelBuilder.Entity<AuditLog>(entity =>

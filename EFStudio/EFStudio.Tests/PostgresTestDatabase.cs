@@ -69,6 +69,7 @@ public class PostgresTestDbContext(DbContextOptions<PostgresTestDbContext> optio
     public DbSet<CrmUser> CrmUsers => Set<CrmUser>();
     public DbSet<AuthUser> AuthUsers => Set<AuthUser>();
     public DbSet<CrmAuditEntry> CrmAuditEntries => Set<CrmAuditEntry>();
+    public DbSet<PostgresTypeCoverageRecord> PostgresTypeCoverageRecords => Set<PostgresTypeCoverageRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -97,6 +98,16 @@ public class PostgresTestDbContext(DbContextOptions<PostgresTestDbContext> optio
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
+
+        modelBuilder.Entity<PostgresTypeCoverageRecord>(entity =>
+        {
+            entity.ToTable("TypeCoverage", "public");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.VarcharValue).HasMaxLength(80);
+            entity.Property(x => x.JsonValue).HasColumnType("jsonb");
+            entity.Property(x => x.NumericValue).HasPrecision(18, 2);
+            entity.Property(x => x.TextValue).HasColumnType("text");
+        });
     }
 }
 
@@ -118,4 +129,24 @@ public class CrmAuditEntry
     public int UserId { get; set; }
     public string EventType { get; set; } = "";
     public CrmUser User { get; set; } = null!;
+}
+
+public class PostgresTypeCoverageRecord
+{
+    public int Id { get; set; }
+    public long BigIntValue { get; set; }
+    public bool BooleanValue { get; set; }
+    public byte[] BinaryValue { get; set; } = [];
+    public string VarcharValue { get; set; } = "";
+    public DateOnly DateValue { get; set; }
+    public double DoubleValue { get; set; }
+    public int IntValue { get; set; }
+    public string JsonValue { get; set; } = "";
+    public decimal NumericValue { get; set; }
+    public float RealValue { get; set; }
+    public short SmallIntValue { get; set; }
+    public string TextValue { get; set; } = "";
+    public TimeOnly TimeValue { get; set; }
+    public DateTimeOffset TimestampValue { get; set; }
+    public Guid UuidValue { get; set; }
 }
