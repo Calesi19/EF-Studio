@@ -6,4 +6,6 @@ public class ColumnInfo
     public string DataType { get; set; } = string.Empty;
     public bool IsPrimaryKey { get; set; }
     public bool IsNullable { get; set; }
+    public bool IsForeignKey { get; set; }
+    public string? ForeignKeyTable { get; set; }
 }

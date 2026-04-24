@@ -10,22 +10,35 @@ public class SchemaExplorer
     {
         return context
             .Model.GetEntityTypes()
-            .Select(entityType => new TableInfo
+            .Select(entityType =>
             {
-                Name = entityType.GetTableName() ?? entityType.DisplayName(),
-                Columns = entityType
-                    .GetProperties()
-                    .Select(p => new ColumnInfo
-                    {
-                        Name =
-                            p.GetColumnName(
-                                StoreObjectIdentifier.Table(entityType.GetTableName()!, null)
-                            ) ?? p.Name,
-                        DataType = p.GetColumnType(),
-                        IsPrimaryKey = p.IsPrimaryKey(),
-                        IsNullable = p.IsNullable,
-                    })
-                    .ToList(),
+                // Get the actual table name in the DB
+                var tableName = entityType.GetTableName() ?? entityType.DisplayName();
+                var tableIdentifier = StoreObjectIdentifier.Table(
+                    tableName,
+                    entityType.GetSchema()
+                );
+
+                return new TableInfo
+                {
+                    Name = tableName,
+                    Columns = entityType
+                        .GetProperties()
+                        .Select(p =>
+                        {
+                            var fk = p.GetContainingForeignKeys().FirstOrDefault();
+                            return new ColumnInfo
+                            {
+                                Name = p.GetColumnName(tableIdentifier) ?? p.Name,
+                                DataType = p.GetColumnType(),
+                                IsPrimaryKey = p.IsPrimaryKey(),
+                                IsForeignKey = fk != null,
+                                ForeignKeyTable = fk?.PrincipalEntityType.GetTableName(),
+                                IsNullable = p.IsNullable,
+                            };
+                        })
+                        .ToList(),
+                };
             })
             .ToList();
     }

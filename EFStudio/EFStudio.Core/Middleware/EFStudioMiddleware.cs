@@ -13,19 +13,15 @@ public class EFStudioMiddleware
 
     public EFStudioMiddleware(RequestDelegate next) => _next = next;
 
-    // Add a generic constraint to your class or just the method
     public async Task InvokeAsync(
         HttpContext context,
         SchemaExplorer explorer,
         IServiceProvider serviceProvider
     )
     {
-        // Resolve the DbContext dynamically from the scope
-        // This finds whatever DbContext was registered in Program.cs
         var dbContext = serviceProvider.GetRequiredService<DbContext>();
         var path = context.Request.Path.Value ?? "";
 
-        // 1. Handle API Request for Schema
         if (path.Equals($"{_rootPath}/api/schema", StringComparison.OrdinalIgnoreCase))
         {
             var schema = explorer.GetSchema(dbContext);
@@ -34,7 +30,6 @@ public class EFStudioMiddleware
             return;
         }
 
-        // Inside InvokeAsync...
         if (path.Equals($"{_rootPath}/api/data", StringComparison.OrdinalIgnoreCase))
         {
             var tableName = context.Request.Query["table"].ToString();
@@ -48,12 +43,10 @@ public class EFStudioMiddleware
             var data = await dataService.GetTableDataAsync(dbContext, tableName);
 
             context.Response.ContentType = "application/json";
-            // We use a simple serialize here; .NET 10 handles the dynamic objects well.
             await context.Response.WriteAsync(JsonSerializer.Serialize(data));
             return;
         }
 
-        // 2. Handle React Static Files (Embedded)
         if (path.StartsWith(_rootPath, StringComparison.OrdinalIgnoreCase))
         {
             await ServeEmbeddedFile(context, path);
@@ -67,21 +60,17 @@ public class EFStudioMiddleware
     {
         var assembly = typeof(EFStudioMiddleware).Assembly;
 
-        // Normalize path logic
         string resourcePath =
             path.Length <= _rootPath.Length ? "index.html" : path.Substring(_rootPath.Length + 1);
         if (string.IsNullOrEmpty(resourcePath))
             resourcePath = "index.html";
 
-        // IMPORTANT: .NET resource names use dots, not slashes.
-        // Example: EFStudio.Core.wwwroot.index.html
         var manifestPath = $"EFStudio.Core.wwwroot.{resourcePath.Replace("/", ".")}";
 
         using var stream = assembly.GetManifestResourceStream(manifestPath);
 
         if (stream == null)
         {
-            // Log the missing resource to console so you can see the name it was looking for
             Console.WriteLine($"[EFStudio] Resource not found: {manifestPath}");
             context.Response.StatusCode = 404;
             return;
