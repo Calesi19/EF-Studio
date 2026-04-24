@@ -25,13 +25,11 @@ Enable EFStudio in your `Program.cs` file. Simply add the middleware within your
 
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
-// ... your EF Core and PostgreSQL configuration
 
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    // That's it! One line to enable the studio.
     app.UseEFStudio();
 }
 
