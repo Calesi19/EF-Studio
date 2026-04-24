@@ -18,13 +18,15 @@ interface TabBarProps {
 export function TabBar({ tabs, activeTabId, tables, recordCounts: _recordCounts, onActivate, onClose, onCloseAll, sidebarOpen, onToggleSidebar }: TabBarProps) {
   return (
     <div className="flex border-b border-border bg-muted/30 overflow-x-auto shrink-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <button
-        onClick={onToggleSidebar}
-        className="flex h-9 w-9 shrink-0 items-center justify-center border-r border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-        title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-      >
-        <HugeiconsIcon icon={SidebarLeft01Icon} size={14} />
-      </button>
+      {tabs.length > 0 && (
+        <button
+          onClick={onToggleSidebar}
+          className="flex h-9 w-9 shrink-0 items-center justify-center border-r border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+        >
+          <HugeiconsIcon icon={SidebarLeft01Icon} size={14} />
+        </button>
+      )}
       {tabs.map((tab) => {
         const table = tables.find((t) => t.name === tab.tableName);
         const isActive = tab.id === activeTabId;

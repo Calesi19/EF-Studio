@@ -12,19 +12,25 @@ interface SidebarProps {
   onSelectTable: (name: string) => void;
 }
 
-export function Sidebar({ tables, recordCounts, selectedTableName, onSelectTable }: SidebarProps) {
+export function Sidebar({
+  tables,
+  recordCounts,
+  selectedTableName,
+  onSelectTable,
+}: SidebarProps) {
   const [modelFilter, setModelFilter] = useState("");
 
   const filteredTables = modelFilter.trim()
-    ? tables.filter((t) =>
-        t.displayName.toLowerCase().includes(modelFilter.toLowerCase()) ||
-        t.name.toLowerCase().includes(modelFilter.toLowerCase())
+    ? tables.filter(
+        (t) =>
+          t.displayName.toLowerCase().includes(modelFilter.toLowerCase()) ||
+          t.name.toLowerCase().includes(modelFilter.toLowerCase()),
       )
     : tables;
 
   return (
     <div className="flex h-full flex-col">
-      <div className="px-2 py-1.5 border-b border-sidebar-border">
+      <div className="px-2 py-1.5">
         <Input
           placeholder="Models"
           value={modelFilter}
