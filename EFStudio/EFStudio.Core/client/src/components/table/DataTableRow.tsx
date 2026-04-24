@@ -26,7 +26,7 @@ export function DataTableRow({
     <TableRow className={`group h-9 ${isSelected ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-muted/30"}`}>
       {!readOnly && (
         <TableCell
-          className={`sticky left-0 z-10 px-0 py-0 align-middle shadow-[inset_-1px_0_0_var(--color-border)] ${
+          className={`sticky left-0 z-10 border-b border-border px-0 py-0 align-middle shadow-[inset_-1px_0_0_var(--color-border)] ${
             isSelected
               ? "bg-[color-mix(in_oklch,var(--color-primary)_5%,var(--color-background))] group-hover:bg-[color-mix(in_oklch,var(--color-primary)_10%,var(--color-background))]"
               : "bg-background group-hover:bg-[color-mix(in_oklch,var(--color-muted)_30%,var(--color-background))]"
@@ -42,7 +42,7 @@ export function DataTableRow({
         </TableCell>
       )}
       {columns.map((col) => (
-        <TableCell key={col.name} className="px-3 py-0 border-r border-border overflow-hidden">
+        <TableCell key={col.name} className="overflow-hidden border-r border-b border-border px-3 py-0">
           <div className="flex items-center h-9">
             <DataTableCell
               value={row[col.name] ?? null}
