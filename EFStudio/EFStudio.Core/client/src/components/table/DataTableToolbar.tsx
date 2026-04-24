@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 
 interface DataTableToolbarProps {
   filter: string;
@@ -36,12 +38,25 @@ export function DataTableToolbar({
             </Button>
           </>
         ) : (
-          <Input
-            placeholder="Filter records..."
-            value={filter}
-            onChange={(e) => onFilterChange(e.target.value)}
-            className="h-7 w-56 text-xs"
-          />
+          <div className="relative w-56">
+            <Input
+              placeholder="Filter records..."
+              value={filter}
+              onChange={(e) => onFilterChange(e.target.value)}
+              className="h-7 w-full pr-8 text-xs"
+            />
+            {filter && (
+              <button
+                type="button"
+                onClick={() => onFilterChange("")}
+                className="absolute right-1 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label="Clear filter"
+                title="Clear filter"
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={12} />
+              </button>
+            )}
+          </div>
         )}
       </div>
       {!readOnly && (
