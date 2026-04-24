@@ -1,11 +1,14 @@
 using EFStudio.Core.Extensions;
 using EFStudio.Sample.Sqlite.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+    options
+        .UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+        .ReplaceService<IModelCacheKeyFactory, SampleModelCacheKeyFactory>()
 );
 
 builder.Services.AddEFStudio<AppDbContext>();

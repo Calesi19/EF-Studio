@@ -34,11 +34,6 @@ function toDisplayName(name: string): string {
   return name.replace(/([a-z0-9])([A-Z])/g, "$1 $2");
 }
 
-function getTableDisplayName(name: string, schema?: string): string {
-  const baseName = toDisplayName(name);
-  return schema ? `${baseName} (${schema})` : baseName;
-}
-
 function mapColumnType(dataType: string): ColumnType {
   const normalized = dataType.toLowerCase();
 
@@ -96,7 +91,7 @@ export async function fetchSchema(signal?: AbortSignal): Promise<SchemaTable[]> 
     key: table.key,
     name: table.name,
     schema: table.schema ?? undefined,
-    displayName: getTableDisplayName(table.name, table.schema ?? undefined),
+    displayName: toDisplayName(table.name),
     modelDisplayName: toDisplayName(table.modelName),
     columns: table.columns.map(normalizeColumn),
   }));

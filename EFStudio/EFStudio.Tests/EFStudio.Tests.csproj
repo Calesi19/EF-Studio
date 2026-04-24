@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EFStudio.Core\EFStudio.Core.csproj" />
+    <ProjectReference Include="..\EFStudio.Sample\EFStudio.Sample.csproj" />
   </ItemGroup>
 
 </Project>

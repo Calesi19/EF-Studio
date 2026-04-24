@@ -1,10 +1,20 @@
 using EFStudio.Sample.Sqlite.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Configuration;
 
 namespace EFStudio.Sample.Sqlite.Data;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public class AppDbContext : DbContext
 {
+    private readonly bool _useSchemas;
+    public bool UseSchemas => _useSchemas;
+
+    public AppDbContext(DbContextOptions<AppDbContext> options, IConfiguration configuration) : base(options)
+    {
+        _useSchemas = configuration.GetValue("SampleData:UseSchemas", false);
+    }
+
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<Office> Offices => Set<Office>();
     public DbSet<Department> Departments => Set<Department>();
@@ -56,6 +66,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        ConfigureSampleSchemas(modelBuilder);
+
         modelBuilder.Entity<Company>(entity =>
         {
             entity.Property(x => x.Name).HasMaxLength(120);
@@ -562,5 +574,52 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(x => x.IpAddress).HasMaxLength(45);
             entity.Property(x => x.ChangesJson).HasColumnType("TEXT");
         });
+    }
+
+    private void ConfigureSampleSchemas(ModelBuilder modelBuilder)
+    {
+        if (!_useSchemas)
+        {
+            return;
+        }
+
+        modelBuilder.Entity<Customer>().ToTable("Customers", "crm");
+        modelBuilder.Entity<CustomerContact>().ToTable("CustomerContacts", "crm");
+        modelBuilder.Entity<SalesOpportunity>().ToTable("SalesOpportunities", "crm");
+        modelBuilder.Entity<OpportunityNote>().ToTable("OpportunityNotes", "crm");
+        modelBuilder.Entity<SupportTicket>().ToTable("SupportTickets", "crm");
+        modelBuilder.Entity<SupportTicketComment>().ToTable("SupportTicketComments", "crm");
+
+        modelBuilder.Entity<Department>().ToTable("Departments", "hr");
+        modelBuilder.Entity<Employee>().ToTable("Employees", "hr");
+        modelBuilder.Entity<EmployeeProfile>().ToTable("EmployeeProfiles", "hr");
+        modelBuilder.Entity<BenefitPlan>().ToTable("BenefitPlans", "hr");
+        modelBuilder.Entity<EmployeeBenefitEnrollment>().ToTable("EmployeeBenefitEnrollments", "hr");
+        modelBuilder.Entity<LeaveRequest>().ToTable("LeaveRequests", "hr");
+        modelBuilder.Entity<Candidate>().ToTable("Candidates", "hr");
+        modelBuilder.Entity<InterviewSession>().ToTable("InterviewSessions", "hr");
+
+        modelBuilder.Entity<Project>().ToTable("Projects", "ops");
+        modelBuilder.Entity<ProjectMembership>().ToTable("ProjectMemberships", "ops");
+        modelBuilder.Entity<WorkItem>().ToTable("WorkItems", "ops");
+        modelBuilder.Entity<WorkComment>().ToTable("WorkComments", "ops");
+        modelBuilder.Entity<Sprint>().ToTable("Sprints", "ops");
+        modelBuilder.Entity<SprintAssignment>().ToTable("SprintAssignments", "ops");
+        modelBuilder.Entity<TimeEntry>().ToTable("TimeEntries", "ops");
+        modelBuilder.Entity<ReleaseNote>().ToTable("ReleaseNotes", "ops");
+        modelBuilder.Entity<FeatureFlag>().ToTable("FeatureFlags", "ops");
+    }
+}
+
+public class SampleModelCacheKeyFactory : IModelCacheKeyFactory
+{
+    public object Create(DbContext context, bool designTime)
+    {
+        if (context is AppDbContext appDbContext)
+        {
+            return (context.GetType(), appDbContext.UseSchemas, designTime);
+        }
+
+        return (context.GetType(), designTime);
     }
 }
