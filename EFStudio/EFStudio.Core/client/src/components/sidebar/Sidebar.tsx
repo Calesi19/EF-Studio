@@ -1,5 +1,4 @@
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { TableDef } from "@/types";
 import { useState } from "react";
 import { TableListItem } from "./TableListItem";
@@ -27,7 +26,7 @@ export function Sidebar({
     : tables;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
       <div className="px-2 py-1.5">
         <Input
           placeholder="Models"
@@ -36,8 +35,8 @@ export function Sidebar({
           className="h-7 text-xs"
         />
       </div>
-      <ScrollArea className="flex-1 py-1">
-        <div className="px-1.5 space-y-px">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1">
+        <div className="space-y-px px-1.5 pb-1">
           {filteredTables.map((table) => (
             <TableListItem
               key={table.key}
@@ -49,7 +48,7 @@ export function Sidebar({
             />
           ))}
         </div>
-      </ScrollArea>
+      </div>
       <div className="px-1.5 py-2.5 border-t border-sidebar-border">
         <ThemeToggle />
       </div>

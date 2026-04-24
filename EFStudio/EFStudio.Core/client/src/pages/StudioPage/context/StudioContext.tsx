@@ -16,6 +16,9 @@ type StudioContextType = {
   selectedTable: TableDef | null;
   currentRows: TableDef["rows"];
   effectiveSidebarOpen: boolean;
+  tableLoadErrors: { tableKey: string; tableName: string; message: string }[];
+  activeTableError: string | null;
+  activeTableLoading: boolean;
   setActiveTabId: (id: string) => void;
   selectTable: (tableKey: string) => void;
   jumpToReference: (tableKey: string, filterValue: FieldValue) => void;
@@ -54,13 +57,29 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
     rows: tableDataQueries[index]?.data ?? [],
   }));
 
-  const tableDataError = tableDataQueries.find((query) => query.error)?.error;
-  const loading = isSchemaLoading || tableDataQueries.some((query) => query.isLoading);
-  const error = schemaError ? toErrorMessage(schemaError) : tableDataError ? toErrorMessage(tableDataError) : null;
+  const tableLoadErrors = schema.flatMap((table, index) => {
+    const query = tableDataQueries[index];
+
+    return query?.error
+      ? [
+          {
+            tableKey: table.key,
+            tableName: table.displayName,
+            message: toErrorMessage(query.error),
+          },
+        ]
+      : [];
+  });
+  const loading = isSchemaLoading;
+  const error = schemaError ? toErrorMessage(schemaError) : null;
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null;
   const selectedTable = activeTab ? (tables.find((table) => table.key === activeTab.tableKey) ?? null) : null;
   const currentRows = selectedTable?.rows ?? [];
   const effectiveSidebarOpen = tabs.length === 0 ? true : sidebarOpen;
+  const activeTabIndex = activeTab ? schema.findIndex((table) => table.key === activeTab.tableKey) : -1;
+  const activeTableQuery = activeTabIndex >= 0 ? tableDataQueries[activeTabIndex] : undefined;
+  const activeTableError = activeTableQuery?.error ? toErrorMessage(activeTableQuery.error) : null;
+  const activeTableLoading = activeTableQuery?.isLoading ?? false;
 
   function createTab(tableKey: string, filter = ""): TabState {
     return {
@@ -200,6 +219,9 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
         selectedTable,
         currentRows,
         effectiveSidebarOpen,
+        tableLoadErrors,
+        activeTableError,
+        activeTableLoading,
         setActiveTabId,
         selectTable,
         jumpToReference,
