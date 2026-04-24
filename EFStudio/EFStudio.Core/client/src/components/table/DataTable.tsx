@@ -35,6 +35,7 @@ interface DataTableProps {
   onBulkDelete: (rows: RecordRow[]) => void;
   onJumpToRef: (tableName: string, value: FieldValue) => void;
   allTables: TableDef[];
+  readOnly?: boolean;
 }
 
 export function DataTable({
@@ -53,6 +54,7 @@ export function DataTable({
   onBulkDelete,
   onJumpToRef,
   allTables,
+  readOnly = false,
 }: DataTableProps) {
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -137,10 +139,11 @@ export function DataTable({
     setSelectedKeys(new Set());
   }
 
-  const tableWidth = 36 + orderedColumns.reduce((sum, col) => sum + (columnWidths[col.name] ?? colWidth(col)), 0);
+  const tableWidth =
+    (readOnly ? 0 : 36) + orderedColumns.reduce((sum, col) => sum + (columnWidths[col.name] ?? colWidth(col)), 0);
   const colgroup = (
     <colgroup>
-      <col style={{ width: 36 }} />
+      {!readOnly && <col style={{ width: 36 }} />}
       {orderedColumns.map((col) => (
         <col key={col.name} style={{ width: columnWidths[col.name] ?? colWidth(col) }} />
       ))}
@@ -155,6 +158,7 @@ export function DataTable({
         onAddRecord={onAddRecord}
         selectedCount={selectedKeys.size}
         onBulkDelete={() => setBulkDeleteOpen(true)}
+        readOnly={readOnly}
       />
       <div className="flex-1 overflow-auto min-h-0 overscroll-none">
         <table className="table-fixed" style={{ minWidth: tableWidth, width: tableWidth }}>
@@ -174,11 +178,12 @@ export function DataTable({
             onDragOver={handleDragOver}
             onDrop={handleDrop}
             onDragEnd={handleDragEnd}
+            readOnly={readOnly}
           />
           <TableBody>
             {paginatedRows.length === 0 ? (
               <tr>
-                <td colSpan={orderedColumns.length + 1} className="py-16 text-center text-xs text-muted-foreground">
+                <td colSpan={orderedColumns.length + (readOnly ? 0 : 1)} className="py-16 text-center text-xs text-muted-foreground">
                   {filter ? "No records match your filter." : "No records found."}
                 </td>
               </tr>
@@ -194,6 +199,7 @@ export function DataTable({
                   onDelete={onDeleteRecord}
                   onJumpToRef={onJumpToRef}
                   allTables={allTables}
+                  readOnly={readOnly}
                 />
               ))
             )}
@@ -207,12 +213,14 @@ export function DataTable({
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
       />
-      <DeleteConfirmDialog
-        open={bulkDeleteOpen}
-        onOpenChange={setBulkDeleteOpen}
-        count={selectedKeys.size}
-        onConfirm={handleBulkDeleteConfirm}
-      />
+      {!readOnly && (
+        <DeleteConfirmDialog
+          open={bulkDeleteOpen}
+          onOpenChange={setBulkDeleteOpen}
+          count={selectedKeys.size}
+          onConfirm={handleBulkDeleteConfirm}
+        />
+      )}
     </div>
   );
 }

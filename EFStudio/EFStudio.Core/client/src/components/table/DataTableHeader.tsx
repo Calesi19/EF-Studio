@@ -20,6 +20,7 @@ interface DataTableHeaderProps {
   onDragOver: (colName: string) => void;
   onDrop: (colName: string) => void;
   onDragEnd: () => void;
+  readOnly?: boolean;
 }
 
 const MIN_COL_WIDTH = 60;
@@ -39,6 +40,7 @@ export function DataTableHeader({
   onDragOver,
   onDrop,
   onDragEnd,
+  readOnly = false,
 }: DataTableHeaderProps) {
   const checkboxRef = useRef<HTMLButtonElement>(null);
 
@@ -77,16 +79,18 @@ export function DataTableHeader({
   return (
     <TableHeader>
       <TableRow className="hover:bg-transparent">
-        <TableHead className="sticky top-0 left-0 z-20 bg-muted px-0 py-1.5 h-auto border-b border-border align-middle shadow-[inset_-1px_0_0_var(--color-border),0_1px_3px_0_oklch(0_0_0/0.08)]">
-          <div className="flex justify-center">
-            <Checkbox
-              ref={checkboxRef}
-              checked={allSelected ? true : someSelected ? "indeterminate" : false}
-              onCheckedChange={onToggleAll}
-              className="h-3.5 w-3.5"
-            />
-          </div>
-        </TableHead>
+        {!readOnly && (
+          <TableHead className="sticky top-0 left-0 z-20 bg-muted px-0 py-1.5 h-auto border-b border-border align-middle shadow-[inset_-1px_0_0_var(--color-border),0_1px_3px_0_oklch(0_0_0/0.08)]">
+            <div className="flex justify-center">
+              <Checkbox
+                ref={checkboxRef}
+                checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                onCheckedChange={onToggleAll}
+                className="h-3.5 w-3.5"
+              />
+            </div>
+          </TableHead>
+        )}
         {columns.map((col) => (
           <TableHead
             key={col.name}

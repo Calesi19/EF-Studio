@@ -1,41 +1,50 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppShell } from "@/components/layout/AppShell";
 import { TabBar } from "@/components/layout/TabBar";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { DataTable } from "@/components/table/DataTable";
-import { RecordDialog } from "@/components/records/RecordDialog";
-import { DeleteConfirmDialog } from "@/components/records/DeleteConfirmDialog";
-import { MOCK_TABLES } from "@/data/mock";
-import type { FieldValue, PaginationState, RecordRow, SortState, TabState } from "@/types";
+import { fetchTables } from "@/lib/api";
+import type { FieldValue, PaginationState, SortState, TableDef, TabState } from "@/types";
 
 const DEFAULT_SORT: SortState = { column: null, direction: "asc" };
 const DEFAULT_PAGINATION: PaginationState = { page: 1, pageSize: 10 };
 
-function initRecords() {
-  const map = new Map<string, RecordRow[]>();
-  for (const table of MOCK_TABLES) {
-    map.set(table.name, [...table.rows]);
-  }
-  return map;
-}
-
 export default function App() {
-  const tables = MOCK_TABLES;
-  const [records, setRecords] = useState<Map<string, RecordRow[]>>(initRecords);
+  const [tables, setTables] = useState<TableDef[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [tabs, setTabs] = useState<TabState[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [editingRow, setEditingRow] = useState<RecordRow | null>(null);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deletingRow, setDeletingRow] = useState<RecordRow | null>(null);
-
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
   const selectedTable = activeTab ? (tables.find((t) => t.name === activeTab.tableName) ?? null) : null;
-  const currentRows = selectedTable ? (records.get(selectedTable.name) ?? []) : [];
+  const currentRows = selectedTable?.rows ?? [];
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadTables() {
+      try {
+        setLoading(true);
+        setError(null);
+        const nextTables = await fetchTables(controller.signal);
+        setTables(nextTables);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setError(err instanceof Error ? err.message : "Failed to load EFStudio data.");
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadTables();
+
+    return () => controller.abort();
+  }, []);
 
   function updateActiveTab(updates: Partial<Pick<TabState, "filter" | "sort" | "pagination">>) {
     if (!activeTabId) return;
@@ -48,13 +57,16 @@ export default function App() {
       setActiveTabId(existing.id);
     } else {
       const id = crypto.randomUUID();
-      setTabs((prev) => [...prev, {
-        id,
-        tableName: name,
-        filter: "",
-        sort: DEFAULT_SORT,
-        pagination: DEFAULT_PAGINATION,
-      }]);
+      setTabs((prev) => [
+        ...prev,
+        {
+          id,
+          tableName: name,
+          filter: "",
+          sort: DEFAULT_SORT,
+          pagination: DEFAULT_PAGINATION,
+        },
+      ]);
       setActiveTabId(id);
     }
   }
@@ -63,11 +75,18 @@ export default function App() {
     const filter = filterValue !== null ? String(filterValue) : "";
     const existing = tabs.find((t) => t.tableName === tableName);
     if (existing) {
-      setTabs((prev) => prev.map((t) => t.id === existing.id ? { ...t, filter, pagination: DEFAULT_PAGINATION } : t));
+      setTabs((prev) =>
+        prev.map((t) =>
+          t.id === existing.id ? { ...t, filter, pagination: DEFAULT_PAGINATION } : t,
+        ),
+      );
       setActiveTabId(existing.id);
     } else {
       const id = crypto.randomUUID();
-      setTabs((prev) => [...prev, { id, tableName, filter, sort: DEFAULT_SORT, pagination: DEFAULT_PAGINATION }]);
+      setTabs((prev) => [
+        ...prev,
+        { id, tableName, filter, sort: DEFAULT_SORT, pagination: DEFAULT_PAGINATION },
+      ]);
       setActiveTabId(id);
     }
   }
@@ -98,73 +117,17 @@ export default function App() {
     const { sort } = activeTab;
     let newSort: SortState;
     if (sort.column === column) {
-      newSort = sort.direction === "asc"
-        ? { column, direction: "desc" }
-        : { column: null, direction: "asc" };
+      newSort =
+        sort.direction === "asc"
+          ? { column, direction: "desc" }
+          : { column: null, direction: "asc" };
     } else {
       newSort = { column, direction: "asc" };
     }
     updateActiveTab({ sort: newSort, pagination: { ...activeTab.pagination, page: 1 } });
   }
 
-  function handleCreateRecord(row: RecordRow) {
-    if (!selectedTable) return;
-    setRecords((prev) => {
-      const next = new Map(prev);
-      next.set(selectedTable.name, [...(prev.get(selectedTable.name) ?? []), row]);
-      return next;
-    });
-  }
-
-  function handleUpdateRecord(row: RecordRow) {
-    if (!selectedTable) return;
-    const pkCol = selectedTable.columns.find((c) => c.isPrimaryKey);
-    setRecords((prev) => {
-      const next = new Map(prev);
-      const rows = prev.get(selectedTable.name) ?? [];
-      next.set(
-        selectedTable.name,
-        pkCol ? rows.map((r) => (r[pkCol.name] === row[pkCol.name] ? row : r)) : rows
-      );
-      return next;
-    });
-  }
-
-  function handleDeleteRecord() {
-    if (!selectedTable || !deletingRow) return;
-    const pkCol = selectedTable.columns.find((c) => c.isPrimaryKey);
-    setRecords((prev) => {
-      const next = new Map(prev);
-      const rows = prev.get(selectedTable.name) ?? [];
-      next.set(
-        selectedTable.name,
-        pkCol
-          ? rows.filter((r) => r[pkCol.name] !== deletingRow[pkCol.name])
-          : rows.filter((r) => r !== deletingRow)
-      );
-      return next;
-    });
-    setDeletingRow(null);
-  }
-
-  function handleBulkDelete(selectedRows: RecordRow[]) {
-    if (!selectedTable) return;
-    const pkCol = selectedTable.columns.find((c) => c.isPrimaryKey);
-    setRecords((prev) => {
-      const next = new Map(prev);
-      const rows = prev.get(selectedTable.name) ?? [];
-      if (pkCol) {
-        const pks = new Set(selectedRows.map((r) => r[pkCol.name]));
-        next.set(selectedTable.name, rows.filter((r) => !pks.has(r[pkCol.name])));
-      } else {
-        const set = new Set(selectedRows);
-        next.set(selectedTable.name, rows.filter((r) => !set.has(r)));
-      }
-      return next;
-    });
-  }
-
-  const recordCounts = new Map(tables.map((t) => [t.name, records.get(t.name)?.length ?? 0]));
+  const recordCounts = new Map(tables.map((t) => [t.name, t.rows.length]));
   const effectiveSidebarOpen = tabs.length === 0 ? true : sidebarOpen;
 
   return (
@@ -191,54 +154,49 @@ export default function App() {
           sidebarOpen={effectiveSidebarOpen}
           onToggleSidebar={handleToggleSidebar}
         />
-        {selectedTable && activeTab ? (
-          <>
-            <DataTable
-              key={activeTab.id}
-              columns={selectedTable.columns}
-              rows={currentRows}
-              filter={activeTab.filter}
-              sort={activeTab.sort}
-              pagination={activeTab.pagination}
-              onFilterChange={(filter) => updateActiveTab({ filter })}
-              onSortChange={handleSortChange}
-              onPageChange={(page) => updateActiveTab({ pagination: { ...activeTab.pagination, page } })}
-              onPageSizeChange={(pageSize) => updateActiveTab({ pagination: { page: 1, pageSize } })}
-              onAddRecord={() => setCreateOpen(true)}
-              onEditRecord={(row) => { setEditingRow(row); setEditOpen(true); }}
-              onDeleteRecord={(row) => { setDeletingRow(row); setDeleteOpen(true); }}
-              onBulkDelete={handleBulkDelete}
-              onJumpToRef={handleJumpToRef}
-              allTables={tables}
-            />
-            <RecordDialog
-              mode="create"
-              open={createOpen}
-              onOpenChange={setCreateOpen}
-              tableDef={selectedTable}
-              allTables={tables}
-              onSubmit={handleCreateRecord}
-            />
-            {editingRow && (
-              <RecordDialog
-                mode="edit"
-                open={editOpen}
-                onOpenChange={setEditOpen}
-                tableDef={selectedTable}
-                initialData={editingRow}
-                allTables={tables}
-                onSubmit={handleUpdateRecord}
-              />
-            )}
-            <DeleteConfirmDialog
-              open={deleteOpen}
-              onOpenChange={setDeleteOpen}
-              onConfirm={() => { handleDeleteRecord(); setDeleteOpen(false); }}
-            />
-          </>
+        {loading ? (
+          <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+            Loading database schema and records...
+          </div>
+        ) : error ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
+            <p className="text-sm font-medium text-foreground">Unable to load EFStudio data</p>
+            <p className="max-w-md text-sm text-muted-foreground">{error}</p>
+          </div>
+        ) : selectedTable && activeTab ? (
+          <DataTable
+            key={activeTab.id}
+            columns={selectedTable.columns}
+            rows={currentRows}
+            filter={activeTab.filter}
+            sort={activeTab.sort}
+            pagination={activeTab.pagination}
+            onFilterChange={(filter) => updateActiveTab({ filter })}
+            onSortChange={handleSortChange}
+            onPageChange={(page) =>
+              updateActiveTab({ pagination: { ...activeTab.pagination, page } })
+            }
+            onPageSizeChange={(pageSize) =>
+              updateActiveTab({ pagination: { page: 1, pageSize } })
+            }
+            onAddRecord={() => {}}
+            onEditRecord={() => {}}
+            onDeleteRecord={() => {}}
+            onBulkDelete={() => {}}
+            onJumpToRef={handleJumpToRef}
+            allTables={tables}
+            readOnly
+          />
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
-            <p className="text-sm">Open a model from the sidebar to get started.</p>
+            <p className="text-sm font-medium text-foreground">
+              {tables.length === 0 ? "No tables found" : "Select a table to browse data"}
+            </p>
+            <p className="text-sm">
+              {tables.length === 0
+                ? "The middleware returned an empty schema."
+                : "EFStudio is currently connected in read-only mode."}
+            </p>
           </div>
         )}
       </AppShell>
