@@ -18,17 +18,19 @@ export function DataTableRow({ row, columns, isSelected, onToggleSelect, onJumpT
   return (
     <TableRow className={`group ${isSelected ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-muted/30"}`}>
       <TableCell
-        className={`sticky left-0 z-10 px-3 py-1 align-middle shadow-[inset_-1px_0_0_var(--color-border)] ${
+        className={`sticky left-0 z-10 px-0 py-1 align-middle shadow-[inset_-1px_0_0_var(--color-border)] ${
           isSelected
             ? "bg-[color-mix(in_oklch,var(--color-primary)_5%,var(--color-background))] group-hover:bg-[color-mix(in_oklch,var(--color-primary)_10%,var(--color-background))]"
             : "bg-background group-hover:bg-[color-mix(in_oklch,var(--color-muted)_30%,var(--color-background))]"
         }`}
       >
-        <Checkbox
-          checked={isSelected}
-          onCheckedChange={onToggleSelect}
-          className="h-3.5 w-3.5"
-        />
+        <div className="flex justify-center">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={onToggleSelect}
+            className="h-3.5 w-3.5"
+          />
+        </div>
       </TableCell>
       {columns.map((col) => (
         <TableCell key={col.name} className="px-3 py-1 align-middle border-r border-border overflow-hidden">
