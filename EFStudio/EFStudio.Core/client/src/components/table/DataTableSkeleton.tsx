@@ -65,15 +65,17 @@ export function DataTableSkeleton({ columns, pageSize }: DataTableSkeletonProps)
           </TableHeader>
           <TableBody>
             {Array.from({ length: pageSize }, (_, i) => (
-              <TableRow key={i} className="hover:bg-transparent">
+              <TableRow key={i} className="h-9 hover:bg-transparent">
                 <td className="px-0 border-b border-border">
-                  <div className="flex justify-center py-2">
+                  <div className="flex h-9 items-center justify-center">
                     <Skeleton className="h-3.5 w-3.5 rounded-sm" />
                   </div>
                 </td>
                 {columns.map((col) => (
-                  <td key={col.name} className="px-3 py-2 border-r border-b border-border">
-                    <Skeleton className="h-4 w-full" />
+                  <td key={col.name} className="border-r border-b border-border px-3 py-0">
+                    <div className="flex h-9 items-center">
+                      <Skeleton className="h-4 w-full" />
+                    </div>
                   </td>
                 ))}
               </TableRow>
