@@ -9,7 +9,6 @@ import { DataTableRow } from "./DataTableRow";
 import { DataTableToolbar } from "./DataTableToolbar";
 
 function colWidth(col: ColumnDef): number {
-
   if (col.type === "datetime") return 160;
   if (col.type === "uuid" || col.isPrimaryKey || col.isForeignKey) return 155;
   if (col.type === "json") return 220;
@@ -58,20 +57,56 @@ export function DataTable({
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => initialWidths(columns));
+  const [columnOrder, setColumnOrder] = useState<string[]>(() => columns.map((c) => c.name));
+  const [draggedCol, setDraggedCol] = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
   useEffect(() => { setSelectedKeys(new Set()); }, [columns]);
   useEffect(() => { setColumnWidths(initialWidths(columns)); }, [columns]);
+  useEffect(() => { setColumnOrder(columns.map((c) => c.name)); }, [columns]);
+
+  const orderedColumns = columnOrder
+    .map((name) => columns.find((c) => c.name === name))
+    .filter((c): c is ColumnDef => c !== undefined);
 
   function handleResizeColumn(name: string, width: number) {
     setColumnWidths((prev) => ({ ...prev, [name]: width }));
   }
 
-  const pkCol = columns.find((c) => c.isPrimaryKey);
+  function handleDragStart(colName: string) {
+    setDraggedCol(colName);
+  }
+
+  function handleDragOver(colName: string) {
+    if (draggedCol && colName !== draggedCol) setDragOverCol(colName);
+  }
+
+  function handleDrop(colName: string) {
+    if (draggedCol && draggedCol !== colName) {
+      setColumnOrder((prev) => {
+        const next = [...prev];
+        const from = next.indexOf(draggedCol);
+        const to = next.indexOf(colName);
+        next.splice(from, 1);
+        next.splice(to, 0, draggedCol);
+        return next;
+      });
+    }
+    setDraggedCol(null);
+    setDragOverCol(null);
+  }
+
+  function handleDragEnd() {
+    setDraggedCol(null);
+    setDragOverCol(null);
+  }
+
+  const pkCol = orderedColumns.find((c) => c.isPrimaryKey);
   function getRowKey(row: RecordRow): string {
     return pkCol ? String(row[pkCol.name]) : JSON.stringify(row);
   }
 
-  const { paginatedRows, totalRows, totalPages } = useTableState(rows, columns, filter, sort, pagination);
+  const { paginatedRows, totalRows, totalPages } = useTableState(rows, orderedColumns, filter, sort, pagination);
 
   const paginatedKeys = paginatedRows.map(getRowKey);
   const allSelected = paginatedKeys.length > 0 && paginatedKeys.every((k) => selectedKeys.has(k));
@@ -102,11 +137,11 @@ export function DataTable({
     setSelectedKeys(new Set());
   }
 
-  const tableWidth = 36 + columns.reduce((sum, col) => sum + (columnWidths[col.name] ?? colWidth(col)), 0);
+  const tableWidth = 36 + orderedColumns.reduce((sum, col) => sum + (columnWidths[col.name] ?? colWidth(col)), 0);
   const colgroup = (
     <colgroup>
       <col style={{ width: 36 }} />
-      {columns.map((col) => (
+      {orderedColumns.map((col) => (
         <col key={col.name} style={{ width: columnWidths[col.name] ?? colWidth(col) }} />
       ))}
     </colgroup>
@@ -125,7 +160,7 @@ export function DataTable({
         <table className="table-fixed" style={{ minWidth: tableWidth, width: tableWidth }}>
           {colgroup}
           <DataTableHeader
-            columns={columns}
+            columns={orderedColumns}
             sort={sort}
             onSortChange={onSortChange}
             allSelected={allSelected}
@@ -133,11 +168,17 @@ export function DataTable({
             onToggleAll={toggleAll}
             columnWidths={columnWidths}
             onResizeColumn={handleResizeColumn}
+            draggedCol={draggedCol}
+            dragOverCol={dragOverCol}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onDragEnd={handleDragEnd}
           />
           <TableBody>
             {paginatedRows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + 1} className="py-16 text-center text-xs text-muted-foreground">
+                <td colSpan={orderedColumns.length + 1} className="py-16 text-center text-xs text-muted-foreground">
                   {filter ? "No records match your filter." : "No records found."}
                 </td>
               </tr>
@@ -146,7 +187,7 @@ export function DataTable({
                 <DataTableRow
                   key={i}
                   row={row}
-                  columns={columns}
+                  columns={orderedColumns}
                   isSelected={selectedKeys.has(getRowKey(row))}
                   onToggleSelect={() => toggleRow(getRowKey(row))}
                   onEdit={onEditRecord}
