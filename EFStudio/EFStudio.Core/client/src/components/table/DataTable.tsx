@@ -9,8 +9,7 @@ import { DataTableRow } from "./DataTableRow";
 import { DataTableToolbar } from "./DataTableToolbar";
 
 function colWidth(col: ColumnDef): number {
-  if (col.type === "boolean") return 72;
-  if (col.type === "number") return 90;
+
   if (col.type === "datetime") return 160;
   if (col.type === "uuid" || col.isPrimaryKey || col.isForeignKey) return 155;
   if (col.type === "json") return 220;
