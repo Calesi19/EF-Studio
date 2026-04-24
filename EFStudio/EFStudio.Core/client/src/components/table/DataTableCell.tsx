@@ -1,7 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ColumnDef, FieldValue, TableDef } from "@/types";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { useState } from "react";
+import { ArrowRight01Icon, Copy01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 interface DataTableCellProps {
@@ -20,13 +21,28 @@ function formatDatetime(raw: string): string {
 }
 
 function TruncatedText({ text, className }: { text: string; className?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy(e: React.MouseEvent) {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span className={`truncate block w-full cursor-default ${className ?? ""}`}>{text}</span>
       </TooltipTrigger>
-      <TooltipContent side="bottom" className="max-w-xs break-all text-xs font-mono">
-        {text}
+      <TooltipContent side="bottom" className="flex items-center gap-2 max-w-sm pr-1">
+        <span className="break-all text-xs font-mono">{text}</span>
+        <button
+          onClick={handleCopy}
+          className="shrink-0 flex items-center justify-center h-5 w-5 rounded hover:bg-white/15 transition-colors text-current"
+        >
+          <HugeiconsIcon icon={copied ? Tick01Icon : Copy01Icon} size={12} />
+        </button>
       </TooltipContent>
     </Tooltip>
   );
