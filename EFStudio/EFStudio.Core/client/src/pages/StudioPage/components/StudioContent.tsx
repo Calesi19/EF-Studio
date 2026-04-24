@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/sidebar/Sidebar";
 import { useStudioContext } from "@/pages/StudioPage/context/StudioContext";
 import { StudioStatus } from "@/pages/StudioPage/components/StudioStatus";
 import { StudioWorkspace } from "@/pages/StudioPage/components/StudioWorkspace";
+import { DataTableSkeleton } from "@/components/table/DataTableSkeleton";
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
@@ -93,9 +94,9 @@ export function StudioContent() {
                   message={activeTableError}
                 />
               ) : activeTableLoading ? (
-                <StudioStatus
-                  title={`Loading ${selectedTable.displayName}`}
-                  message="Fetching table records..."
+                <DataTableSkeleton
+                  columns={selectedTable.columns}
+                  pageSize={activeTab.pagination.pageSize}
                 />
               ) : (
                 <StudioWorkspace />
