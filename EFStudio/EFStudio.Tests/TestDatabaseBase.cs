@@ -1,3 +1,4 @@
+using Bogus;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -34,4 +35,29 @@ public class TestUser
 {
     public int Id { get; set; }
     public string Name { get; set; } = "";
+    public string Email { get; set; } = "";
+    public bool IsActive { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+    public decimal CreditLimit { get; set; }
+}
+
+public static class TestDataFactory
+{
+    private const int BogusSeed = 424242;
+
+    public static List<TestUser> CreateUsers(int count)
+    {
+        Randomizer.Seed = new Random(BogusSeed);
+
+        var nextId = 1;
+
+        return new Faker<TestUser>()
+            .RuleFor(user => user.Id, _ => nextId++)
+            .RuleFor(user => user.Name, faker => faker.Name.FullName())
+            .RuleFor(user => user.Email, (faker, user) => faker.Internet.Email(user.Name.Replace(" ", ".")))
+            .RuleFor(user => user.IsActive, faker => faker.Random.Bool(0.8f))
+            .RuleFor(user => user.CreatedAtUtc, faker => faker.Date.Past(2).ToUniversalTime())
+            .RuleFor(user => user.CreditLimit, faker => faker.Random.Decimal(500m, 25_000m))
+            .Generate(count);
+    }
 }

@@ -6,10 +6,11 @@ using Xunit;
 public class DataServiceTests : TestDatabaseBase
 {
     [Fact]
-    public async Task GetTableDataAsync_ShouldReturnSeededRows()
+    public async Task GetTableDataAsync_ShouldReturnBogusRows()
     {
         // Arrange
-        Context.Users.Add(new TestUser { Id = 1, Name = "Test Admin" });
+        var fakeUsers = TestDataFactory.CreateUsers(12);
+        Context.Users.AddRange(fakeUsers);
         await Context.SaveChangesAsync();
 
         var service = new DataService(NullLogger<DataService>.Instance);
@@ -23,8 +24,14 @@ public class DataServiceTests : TestDatabaseBase
 
         // Assert
         Assert.NotNull(result);
-        Assert.NotEmpty(result.Rows);
-        var firstRow = result.Rows[0];
-        Assert.Equal("Test Admin", firstRow["Name"]);
+        Assert.Equal(fakeUsers.Count, result.Rows.Count);
+
+        var firstExpectedUser = fakeUsers[0];
+        var firstRow = result.Rows.Single(row => Convert.ToInt32(row["Id"]) == firstExpectedUser.Id);
+
+        Assert.Equal(firstExpectedUser.Name, firstRow["Name"]);
+        Assert.Equal(firstExpectedUser.Email, firstRow["Email"]);
+        Assert.Equal(firstExpectedUser.IsActive, firstRow["IsActive"]);
+        Assert.Equal(firstExpectedUser.CreditLimit, firstRow["CreditLimit"]);
     }
 }

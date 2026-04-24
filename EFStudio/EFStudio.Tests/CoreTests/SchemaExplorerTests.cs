@@ -5,7 +5,7 @@ using Xunit;
 public class SchemaExplorerTests : TestDatabaseBase
 {
     [Fact]
-    public void GetSchema_ShouldReturnCorrectTableNames()
+    public void GetSchema_ShouldReturnColumnsForBogusBackedTestEntity()
     {
         // Arrange
         var service = new SchemaService(NullLogger<SchemaService>.Instance);
@@ -18,5 +18,9 @@ public class SchemaExplorerTests : TestDatabaseBase
         Assert.NotNull(userTable);
         Assert.Contains(userTable.Columns, c => c.Name == "Id");
         Assert.Contains(userTable.Columns, c => c.Name == "Name");
+        Assert.Contains(userTable.Columns, c => c.Name == "Email");
+        Assert.Contains(userTable.Columns, c => c.Name == "IsActive");
+        Assert.Contains(userTable.Columns, c => c.Name == "CreatedAtUtc");
+        Assert.Contains(userTable.Columns, c => c.Name == "CreditLimit");
     }
 }
