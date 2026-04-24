@@ -63,7 +63,11 @@ function normalizeCellValue(value: unknown): RecordRow[string] {
     return null;
   }
 
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
     return value;
   }
 
@@ -84,7 +88,10 @@ function normalizeColumn(column: ApiColumnInfo): ColumnDef {
 function normalizeRows(rows: Record<string, unknown>[]): RecordRow[] {
   return rows.map((row) =>
     Object.fromEntries(
-      Object.entries(row).map(([key, value]) => [key, normalizeCellValue(value)]),
+      Object.entries(row).map(([key, value]) => [
+        key,
+        normalizeCellValue(value),
+      ]),
     ),
   );
 }
@@ -104,14 +111,18 @@ export async function fetchTables(signal?: AbortSignal): Promise<TableDef[]> {
       );
 
       if (!tableResponse.ok) {
-        throw new Error(`Failed to load data for ${table.Name} (${tableResponse.status})`);
+        throw new Error(
+          `Failed to load data for ${table.Name} (${tableResponse.status})`,
+        );
       }
 
       return (await tableResponse.json()) as ApiTableDataResponse;
     }),
   );
 
-  const rowsByTable = new Map(tableData.map((table) => [table.Name, normalizeRows(table.Rows)]));
+  const rowsByTable = new Map(
+    tableData.map((table) => [table.Name, normalizeRows(table.Rows)]),
+  );
 
   return schema.map((table) => ({
     name: table.Name,
