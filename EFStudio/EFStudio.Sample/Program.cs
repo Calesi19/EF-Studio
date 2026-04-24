@@ -19,8 +19,11 @@ using (var scope = app.Services.CreateScope())
     db.Database.EnsureCreated();
 }
 
-// 4. Enable EFStudio UI at /efstudio
-app.UseEFStudio();
+// 4. Enable EFStudio UI at /efstudio during development
+if (app.Environment.IsDevelopment())
+{
+    app.UseEFStudio();
+}
 
 app.MapGet("/", () => Results.Redirect("/efstudio"));
 

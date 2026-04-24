@@ -21,10 +21,19 @@ dotnet add package EFStudio
 
 ## Quick Start
 
-Enable EFStudio in your `Program.cs` file. Simply add the middleware within your development environment check:
+Enable EFStudio in your `Program.cs` file by registering it with your EF Core `DbContext`, then adding the middleware to the pipeline:
 
 ```csharp
+using EFStudio.Core.Extensions;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"))
+);
+
+builder.Services.AddEFStudio<AppDbContext>();
 
 var app = builder.Build();
 
