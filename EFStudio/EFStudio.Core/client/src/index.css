@@ -216,3 +216,9 @@ body {
     @apply font-sans;
   }
 }
+
+html,
+body {
+  /* This prevents the entire viewport from 'bouncing' when you hit the edges */
+  overscroll-behavior: none;
+}
