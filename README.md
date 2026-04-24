@@ -1,6 +1,6 @@
-# EF Studio
+# EFStudio
 
-**EF Studio** is a minimal, plug-and-play visual database browser for EF Core apps. Heavily inspired by Prisma Studio, it lets you inspect schema and records directly from your browser with a single line of configuration in your ASP.NET Core application.
+**EFStudio** is a minimal, plug-and-play visual database browser for EF Core apps. Heavily inspired by Prisma Studio, it lets you inspect schema and records directly from your browser with a single line of configuration in your ASP.NET Core application.
 
 ![EFStudio Screenshot](./docs/banner.webp)
 
@@ -44,6 +44,8 @@ if (app.Environment.IsDevelopment())
 
 app.Run();
 ```
+
+Note: the NuGet package name is `EFStudio`, while the current extension-method namespace is `EFStudio.Core.Extensions`.
 
 By default, the studio will be available at `/efstudio` (e.g., `http://localhost:5000/efstudio`).
 
