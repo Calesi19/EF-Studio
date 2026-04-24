@@ -48,36 +48,35 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { data: schema = [], isLoading: isSchemaLoading, error: schemaError } = useSchema();
 
+  const openTableKeys = [...new Set(tabs.map((tab) => tab.tableKey))];
+
   const tableDataQueries = useQueries({
-    queries: schema.map((table) => tableDataQueryOptions(table.key)),
+    queries: openTableKeys.map((key) => tableDataQueryOptions(key)),
   });
 
-  const tables = schema.map((table, index) => ({
+  const tableDataMap = new Map(openTableKeys.map((key, index) => [key, tableDataQueries[index]]));
+
+  const tables = schema.map((table) => ({
     ...table,
-    rows: tableDataQueries[index]?.data ?? [],
+    rows: tableDataMap.get(table.key)?.data ?? [],
   }));
 
-  const tableLoadErrors = schema.flatMap((table, index) => {
-    const query = tableDataQueries[index];
+  const tableLoadErrors = openTableKeys.flatMap((key) => {
+    const query = tableDataMap.get(key);
+    const table = schema.find((t) => t.key === key);
 
-    return query?.error
-      ? [
-          {
-            tableKey: table.key,
-            tableName: table.displayName,
-            message: toErrorMessage(query.error),
-          },
-        ]
+    return query?.error && table
+      ? [{ tableKey: key, tableName: table.displayName, message: toErrorMessage(query.error) }]
       : [];
   });
+
   const loading = isSchemaLoading;
   const error = schemaError ? toErrorMessage(schemaError) : null;
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null;
   const selectedTable = activeTab ? (tables.find((table) => table.key === activeTab.tableKey) ?? null) : null;
   const currentRows = selectedTable?.rows ?? [];
   const effectiveSidebarOpen = tabs.length === 0 ? true : sidebarOpen;
-  const activeTabIndex = activeTab ? schema.findIndex((table) => table.key === activeTab.tableKey) : -1;
-  const activeTableQuery = activeTabIndex >= 0 ? tableDataQueries[activeTabIndex] : undefined;
+  const activeTableQuery = activeTab ? tableDataMap.get(activeTab.tableKey) : undefined;
   const activeTableError = activeTableQuery?.error ? toErrorMessage(activeTableQuery.error) : null;
   const activeTableLoading = activeTableQuery?.isLoading ?? false;
 
