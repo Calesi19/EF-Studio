@@ -34,5 +34,27 @@ public class Employee
     public List<WorkComment> Comments { get; set; } = [];
     public List<Post> Posts { get; set; } = [];
     public List<Asset> Assets { get; set; } = [];
+    public List<Customer> ManagedCustomers { get; set; } = [];
+    public List<SalesOpportunity> OwnedOpportunities { get; set; } = [];
+    public List<OpportunityNote> OpportunityNotes { get; set; } = [];
+    public List<SupportTicket> AssignedSupportTickets { get; set; } = [];
+    public List<SupportTicketComment> SupportTicketComments { get; set; } = [];
+    public List<PurchaseOrder> RequestedPurchaseOrders { get; set; } = [];
+    public List<PurchaseOrder> ApprovedPurchaseOrders { get; set; } = [];
+    public List<ExpenseClaim> ExpenseClaims { get; set; } = [];
+    public List<ExpenseClaim> ApprovedExpenseClaims { get; set; } = [];
+    public List<TeamMembership> TeamMemberships { get; set; } = [];
+    public List<CourseEnrollment> CourseEnrollments { get; set; } = [];
+    public List<KnowledgeBaseArticle> KnowledgeBaseArticles { get; set; } = [];
+    public List<CompanyEvent> HostedEvents { get; set; } = [];
+    public List<EventAttendance> EventAttendances { get; set; } = [];
+    public List<ApiCredential> ApiCredentials { get; set; } = [];
+    public List<ReleaseNote> ReleaseNotes { get; set; } = [];
+    public List<TimeEntry> TimeEntries { get; set; } = [];
+    public List<EmployeeBenefitEnrollment> BenefitEnrollments { get; set; } = [];
+    public List<LeaveRequest> LeaveRequests { get; set; } = [];
+    public List<LeaveRequest> ApprovedLeaveRequests { get; set; } = [];
+    public List<Candidate> RecruitedCandidates { get; set; } = [];
+    public List<InterviewSession> Interviews { get; set; } = [];
     public List<AuditLog> AuditLogs { get; set; } = [];
 }
