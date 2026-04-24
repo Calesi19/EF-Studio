@@ -32,23 +32,25 @@ export function TabBar({ tabs, activeTabId, tables, onActivate, onClose, onClose
       {tabs.map((tab) => {
         const table = tables.find((t) => t.key === tab.tableKey);
         const isActive = tab.id === activeTabId;
+        const tabLabel = nameDisplay === "model" ? (table?.modelDisplayName ?? tab.tableKey) : (table?.name ?? tab.tableKey);
 
         return (
           <div
             key={tab.id}
             onClick={() => onActivate(tab.id)}
             className={cn(
-              "group flex items-center gap-2 px-3 border-r border-border cursor-pointer shrink-0 select-none h-9 text-xs transition-colors",
+              "group flex h-9 w-44 shrink-0 items-center gap-2 border-r border-border px-3 text-xs transition-colors cursor-pointer select-none",
               isActive
                 ? "bg-background text-foreground font-medium"
                 : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
             )}
+            title={tabLabel}
           >
-            <span>{nameDisplay === "model" ? (table?.modelDisplayName ?? tab.tableKey) : (table?.name ?? tab.tableKey)}</span>
+            <span className="min-w-0 flex-1 truncate">{tabLabel}</span>
             <button
               onClick={(e) => { e.stopPropagation(); onClose(tab.id); }}
               className={cn(
-                "flex h-3.5 w-3.5 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors leading-none",
+                "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors leading-none",
                 isActive ? "opacity-50 hover:opacity-100" : "opacity-0 group-hover:opacity-50 hover:!opacity-100"
               )}
               tabIndex={-1}
