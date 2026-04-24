@@ -8,10 +8,11 @@ interface TableListItemProps {
   onClick: () => void;
 }
 
-export function TableListItem({ name: _name, displayName, rowCount, isSelected, onClick }: TableListItemProps) {
+export function TableListItem({ name, displayName, rowCount, isSelected, onClick }: TableListItemProps) {
   return (
     <button
       onClick={onClick}
+      title={name}
       className={cn(
         "flex w-full items-center justify-between rounded px-2 py-1 text-left text-xs transition-colors",
         isSelected

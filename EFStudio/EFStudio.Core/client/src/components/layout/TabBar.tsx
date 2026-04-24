@@ -15,7 +15,7 @@ interface TabBarProps {
   onToggleSidebar: () => void;
 }
 
-export function TabBar({ tabs, activeTabId, tables, recordCounts: _recordCounts, onActivate, onClose, onCloseAll, sidebarOpen, onToggleSidebar }: TabBarProps) {
+export function TabBar({ tabs, activeTabId, tables, recordCounts, onActivate, onClose, onCloseAll, sidebarOpen, onToggleSidebar }: TabBarProps) {
   return (
     <div className="flex border-b border-border bg-muted/30 overflow-x-auto shrink-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {tabs.length > 0 && (
@@ -43,6 +43,9 @@ export function TabBar({ tabs, activeTabId, tables, recordCounts: _recordCounts,
             )}
           >
             <span>{table?.displayName ?? tab.tableName}</span>
+            <span className="text-[10px] text-muted-foreground">
+              {recordCounts.get(tab.tableName) ?? 0}
+            </span>
             <button
               onClick={(e) => { e.stopPropagation(); onClose(tab.id); }}
               className={cn(

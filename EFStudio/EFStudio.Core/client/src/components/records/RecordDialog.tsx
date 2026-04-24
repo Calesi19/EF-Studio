@@ -8,8 +8,10 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { FieldValue, RecordRow, TableDef } from "@/types";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { RecordForm } from "./RecordForm";
+
+const DEFAULT_NUMBER_VALUE = 0;
 
 interface RecordDialogProps {
   mode: "create" | "edit";
@@ -29,9 +31,10 @@ function buildInitialRow(tableDef: TableDef, mode: "create" | "edit", initialDat
     } else if (col.isPrimaryKey && col.type === "uuid") {
       row[col.name] = crypto.randomUUID();
     } else if (col.isPrimaryKey && col.type === "number") {
-      row[col.name] = Date.now();
+      row[col.name] = DEFAULT_NUMBER_VALUE;
     } else {
-      row[col.name] = col.isNullable ? null : col.type === "boolean" ? false : col.type === "number" ? 0 : "";
+      row[col.name] =
+        col.isNullable ? null : col.type === "boolean" ? false : col.type === "number" ? DEFAULT_NUMBER_VALUE : "";
     }
   }
   return row;
@@ -46,15 +49,36 @@ export function RecordDialog({
   allTables,
   onSubmit,
 }: RecordDialogProps) {
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <RecordDialogContent
+      key={`${mode}-${tableDef.name}-${JSON.stringify(initialData ?? {})}`}
+      mode={mode}
+      open={open}
+      onOpenChange={onOpenChange}
+      tableDef={tableDef}
+      initialData={initialData}
+      allTables={allTables}
+      onSubmit={onSubmit}
+    />
+  );
+}
+
+function RecordDialogContent({
+  mode,
+  open,
+  onOpenChange,
+  tableDef,
+  initialData,
+  allTables,
+  onSubmit,
+}: RecordDialogProps) {
   const [formData, setFormData] = useState<RecordRow>(() =>
     buildInitialRow(tableDef, mode, initialData)
   );
-
-  useEffect(() => {
-    if (open) {
-      setFormData(buildInitialRow(tableDef, mode, initialData));
-    }
-  }, [open, tableDef, mode, initialData]);
 
   function handleChange(field: string, value: FieldValue) {
     setFormData((prev) => ({ ...prev, [field]: value }));

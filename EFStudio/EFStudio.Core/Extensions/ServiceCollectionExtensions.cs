@@ -11,7 +11,7 @@ public static class EFStudioExtensions
     public static IServiceCollection AddEFStudio<TContext>(this IServiceCollection services)
         where TContext : DbContext
     {
-        services.AddScoped<SchemaExplorer>();
+        services.AddScoped<SchemaService>();
         services.AddScoped<DataService>();
         services.AddScoped<DbContext>(provider => provider.GetRequiredService<TContext>());
         return services;

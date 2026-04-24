@@ -1,6 +1,6 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { TableCell, TableRow } from "@/components/ui/table";
-import type { ColumnDef, FieldValue, RecordRow, TableDef } from "@/types";
+import type { ColumnDef, FieldValue, RecordRow } from "@/types";
 import { DataTableCell } from "./DataTableCell";
 
 interface DataTableRowProps {
@@ -11,7 +11,6 @@ interface DataTableRowProps {
   onEdit: (row: RecordRow) => void;
   onDelete: (row: RecordRow) => void;
   onJumpToRef: (tableName: string, value: FieldValue) => void;
-  allTables: TableDef[];
   readOnly?: boolean;
 }
 
@@ -21,7 +20,6 @@ export function DataTableRow({
   isSelected,
   onToggleSelect,
   onJumpToRef,
-  allTables,
   readOnly = false,
 }: DataTableRowProps) {
   return (
@@ -50,7 +48,6 @@ export function DataTableRow({
               value={row[col.name] ?? null}
               column={col}
               onJumpToRef={col.isForeignKey && col.foreignKeyTable ? onJumpToRef : undefined}
-              allTables={allTables}
             />
           </div>
         </TableCell>

@@ -1,15 +1,16 @@
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { ColumnDef, FieldValue, TableDef } from "@/types";
+import type { ColumnDef, FieldValue } from "@/types";
 import { useState } from "react";
 import { ArrowRight01Icon, Copy01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+
+const COPY_FEEDBACK_DURATION_MS = 1500;
 
 interface DataTableCellProps {
   value: FieldValue;
   column: ColumnDef;
   onJumpToRef?: (tableName: string, value: FieldValue) => void;
-  allTables: TableDef[];
 }
 
 function formatDatetime(raw: string): string {
@@ -27,7 +28,7 @@ function TruncatedText({ text, className }: { text: string; className?: string }
     e.stopPropagation();
     navigator.clipboard.writeText(text);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setTimeout(() => setCopied(false), COPY_FEEDBACK_DURATION_MS);
   }
 
   return (
@@ -48,7 +49,7 @@ function TruncatedText({ text, className }: { text: string; className?: string }
   );
 }
 
-export function DataTableCell({ value, column, onJumpToRef, allTables: _allTables }: DataTableCellProps) {
+export function DataTableCell({ value, column, onJumpToRef }: DataTableCellProps) {
   if (value === null || value === undefined) {
     return <span className="text-muted-foreground italic text-xs">null</span>;
   }

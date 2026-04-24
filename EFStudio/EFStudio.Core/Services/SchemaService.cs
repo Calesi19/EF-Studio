@@ -1,13 +1,20 @@
-using EFStudio.Core.Models;
+using EFStudio.Core.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.Extensions.Logging;
 
 namespace EFStudio.Core.Services;
 
-public class SchemaExplorer
+public class SchemaService
 {
-    public List<TableInfo> GetSchema(DbContext context)
+    private readonly ILogger<SchemaService> _logger;
+
+    public SchemaService(ILogger<SchemaService> logger) => _logger = logger;
+
+    public IReadOnlyList<TableInfoContract> GetSchema(DbContext context)
     {
+        _logger.LogInformation("Loading EFStudio schema for context {DbContextType}.", context.GetType().Name);
+
         return context
             .Model.GetEntityTypes()
             .Select(entityType =>
@@ -19,26 +26,25 @@ public class SchemaExplorer
                     entityType.GetSchema()
                 );
 
-                return new TableInfo
-                {
-                    Name = tableName,
-                    Columns = entityType
+                return new TableInfoContract(
+                    tableName,
+                    entityType
                         .GetProperties()
-                        .Select(p =>
+                        .Select(property =>
                         {
-                            var fk = p.GetContainingForeignKeys().FirstOrDefault();
-                            return new ColumnInfo
-                            {
-                                Name = p.GetColumnName(tableIdentifier) ?? p.Name,
-                                DataType = p.GetColumnType(),
-                                IsPrimaryKey = p.IsPrimaryKey(),
-                                IsForeignKey = fk != null,
-                                ForeignKeyTable = fk?.PrincipalEntityType.GetTableName(),
-                                IsNullable = p.IsNullable,
-                            };
+                            var foreignKey = property.GetContainingForeignKeys().FirstOrDefault();
+
+                            return new ColumnInfoContract(
+                                property.GetColumnName(tableIdentifier) ?? property.Name,
+                                property.GetColumnType() ?? property.ClrType.Name,
+                                property.IsPrimaryKey(),
+                                property.IsNullable,
+                                foreignKey != null,
+                                foreignKey?.PrincipalEntityType.GetTableName()
+                            );
                         })
-                        .ToList(),
-                };
+                        .ToList()
+                );
             })
             .ToList();
     }

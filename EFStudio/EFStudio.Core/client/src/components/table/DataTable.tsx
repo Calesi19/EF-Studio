@@ -1,18 +1,24 @@
 import { TableBody } from "@/components/ui/table";
 import { useTableState } from "@/hooks/useTableState";
-import type { ColumnDef, FieldValue, PaginationState, RecordRow, SortState, TableDef } from "@/types";
-import { useEffect, useState } from "react";
+import type { ColumnDef, FieldValue, PaginationState, RecordRow, SortState } from "@/types";
+import { useState } from "react";
 import { DeleteConfirmDialog } from "../records/DeleteConfirmDialog";
 import { DataTableHeader } from "./DataTableHeader";
 import { DataTablePagination } from "./DataTablePagination";
 import { DataTableRow } from "./DataTableRow";
 import { DataTableToolbar } from "./DataTableToolbar";
 
+const READ_WRITE_SELECTION_COLUMN_WIDTH = 36;
+const DATETIME_COLUMN_WIDTH = 160;
+const RELATION_COLUMN_WIDTH = 155;
+const JSON_COLUMN_WIDTH = 220;
+const DEFAULT_COLUMN_WIDTH = 180;
+
 function colWidth(col: ColumnDef): number {
-  if (col.type === "datetime") return 160;
-  if (col.type === "uuid" || col.isPrimaryKey || col.isForeignKey) return 155;
-  if (col.type === "json") return 220;
-  return 180;
+  if (col.type === "datetime") return DATETIME_COLUMN_WIDTH;
+  if (col.type === "uuid" || col.isPrimaryKey || col.isForeignKey) return RELATION_COLUMN_WIDTH;
+  if (col.type === "json") return JSON_COLUMN_WIDTH;
+  return DEFAULT_COLUMN_WIDTH;
 }
 
 function initialWidths(columns: ColumnDef[]): Record<string, number> {
@@ -34,7 +40,6 @@ interface DataTableProps {
   onDeleteRecord: (row: RecordRow) => void;
   onBulkDelete: (rows: RecordRow[]) => void;
   onJumpToRef: (tableName: string, value: FieldValue) => void;
-  allTables: TableDef[];
   readOnly?: boolean;
 }
 
@@ -53,7 +58,6 @@ export function DataTable({
   onDeleteRecord,
   onBulkDelete,
   onJumpToRef,
-  allTables,
   readOnly = false,
 }: DataTableProps) {
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
@@ -62,10 +66,6 @@ export function DataTable({
   const [columnOrder, setColumnOrder] = useState<string[]>(() => columns.map((c) => c.name));
   const [draggedCol, setDraggedCol] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
-
-  useEffect(() => { setSelectedKeys(new Set()); }, [columns]);
-  useEffect(() => { setColumnWidths(initialWidths(columns)); }, [columns]);
-  useEffect(() => { setColumnOrder(columns.map((c) => c.name)); }, [columns]);
 
   const orderedColumns = columnOrder
     .map((name) => columns.find((c) => c.name === name))
@@ -129,7 +129,11 @@ export function DataTable({
   function toggleRow(key: string) {
     setSelectedKeys((prev) => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
       return next;
     });
   }
@@ -140,10 +144,11 @@ export function DataTable({
   }
 
   const tableWidth =
-    (readOnly ? 0 : 36) + orderedColumns.reduce((sum, col) => sum + (columnWidths[col.name] ?? colWidth(col)), 0);
+    (readOnly ? 0 : READ_WRITE_SELECTION_COLUMN_WIDTH) +
+    orderedColumns.reduce((sum, col) => sum + (columnWidths[col.name] ?? colWidth(col)), 0);
   const colgroup = (
     <colgroup>
-      {!readOnly && <col style={{ width: 36 }} />}
+      {!readOnly && <col style={{ width: READ_WRITE_SELECTION_COLUMN_WIDTH }} />}
       {orderedColumns.map((col) => (
         <col key={col.name} style={{ width: columnWidths[col.name] ?? colWidth(col) }} />
       ))}
@@ -198,7 +203,6 @@ export function DataTable({
                   onEdit={onEditRecord}
                   onDelete={onDeleteRecord}
                   onJumpToRef={onJumpToRef}
-                  allTables={allTables}
                   readOnly={readOnly}
                 />
               ))

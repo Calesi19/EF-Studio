@@ -8,6 +8,8 @@ import {
 } from "@/components/ui/select";
 import type { PaginationState } from "@/types";
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
+
 interface DataTablePaginationProps {
   pagination: PaginationState;
   totalRows: number;
@@ -15,8 +17,6 @@ interface DataTablePaginationProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
 }
-
-const PAGE_SIZES = [10, 20, 50, 100];
 
 export function DataTablePagination({
   pagination,
@@ -44,7 +44,7 @@ export function DataTablePagination({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {PAGE_SIZES.map((size) => (
+              {PAGE_SIZE_OPTIONS.map((size) => (
                 <SelectItem key={size} value={String(size)} className="text-xs">
                   {size}
                 </SelectItem>
