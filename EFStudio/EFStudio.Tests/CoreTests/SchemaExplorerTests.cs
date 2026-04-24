@@ -1,4 +1,5 @@
 using EFStudio.Core.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 public class SchemaExplorerTests : TestDatabaseBase
@@ -7,10 +8,10 @@ public class SchemaExplorerTests : TestDatabaseBase
     public void GetSchema_ShouldReturnCorrectTableNames()
     {
         // Arrange
-        var explorer = new SchemaExplorer();
+        var service = new SchemaService(NullLogger<SchemaService>.Instance);
 
         // Act
-        var schema = explorer.GetSchema(Context);
+        var schema = service.GetSchema(Context);
 
         // Assert
         var userTable = schema.FirstOrDefault(t => t.Name == "Users");
