@@ -1,0 +1,62 @@
+## [ Build Artifacts ]
+bin/
+obj/
+[Rr]elease/
+[Dd]ebug/
+x64/
+x86/
+bld/
+[Log]s/
+
+## [ Specialized Build Folders ]
+# Used by MSBuild for publishing
+publish/
+# Used by Azure Functions Core Tools
+.azurefunctions/
+# ASP.NET Core cache
+.kpro_cache/
+
+## [ User-Specific Files ]
+*.user
+*.userosscache
+*.sln.docstates
+# Rider / Resharper
+.idea/
+*.sln.iml
+# Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+## [ Visual Studio Specific ]
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## [ NuGet Packages ]
+# Most projects use 'dotnet restore', so we ignore the local packages folder
+*.nupkg
+**/packages/*
+!**/packages/build/
+# Specifically for NuGet's global cache
+node_modules/
+
+## [ Environment & Secrets ]
+# Do NOT commit secrets
+.env
+*.dev.secrets
+appsettings.Development.json
+# Note: Some teams prefer to commit appsettings.Development.json 
+# but keep actual secrets in 'User Secrets' or environment variables.
+
+## [ Testing ]
+TestResults/
+*.sequenced
+
+## [ Operating System Files ]
+.DS_Store
+Thumbs.db
