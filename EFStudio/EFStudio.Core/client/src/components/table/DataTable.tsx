@@ -122,7 +122,7 @@ export function DataTable({
         selectedCount={selectedKeys.size}
         onBulkDelete={() => setBulkDeleteOpen(true)}
       />
-      <div className="flex-1 overflow-auto min-h-0">
+      <div className="flex-1 overflow-auto min-h-0 overscroll-none">
         <table className="table-fixed" style={{ minWidth: tableWidth, width: tableWidth }}>
           {colgroup}
           <DataTableHeader
