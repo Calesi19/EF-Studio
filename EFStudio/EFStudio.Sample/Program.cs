@@ -16,7 +16,9 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureDeleted();
     db.Database.EnsureCreated();
+    await SampleDataSeeder.SeedAsync(db);
 }
 
 // 4. Enable EFStudio UI at /efstudio during development
