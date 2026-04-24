@@ -7,6 +7,9 @@ x64/
 x86/
 bld/
 [Log]s/
+.db
+.db-wal
+.db-shm
 
 ## [ Specialized Build Folders ]
 # Used by MSBuild for publishing
