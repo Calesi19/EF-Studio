@@ -1,6 +1,6 @@
-# EFStudio
+# EF Studio
 
-**EFStudio** is a minimal, plug-and-play visual database editor for EF Core and PostgreSQL. Heavily inspired by Prisma Studio, it allows you to explore, edit, and manage your data directly from your browser with a single line of configuration in your ASP.NET Core application.
+**EF Studio** is a minimal, plug-and-play visual database editor for EF Core and PostgreSQL. Heavily inspired by Prisma Studio, it allows you to explore, edit, and manage your data directly from your browser with a single line of configuration in your ASP.NET Core application.
 
 ![EFStudio Screenshot](./docs/banner.webp)
 
