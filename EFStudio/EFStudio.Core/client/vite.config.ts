@@ -12,8 +12,9 @@ export default defineConfig({
     },
   },
   server: {
+    open: "/efstudio/",
     proxy: {
-      "/efstudio": {
+      "/efstudio/api": {
         target: "http://localhost:5000",
         changeOrigin: true,
       },

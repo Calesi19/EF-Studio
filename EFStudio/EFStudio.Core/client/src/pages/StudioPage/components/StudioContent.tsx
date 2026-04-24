@@ -4,6 +4,9 @@ import { Sidebar } from "@/components/sidebar/Sidebar";
 import { useStudioContext } from "@/pages/StudioPage/context/StudioContext";
 import { StudioStatus } from "@/pages/StudioPage/components/StudioStatus";
 import { StudioWorkspace } from "@/pages/StudioPage/components/StudioWorkspace";
+import { useState } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
 
 export function StudioContent() {
   const {
@@ -24,6 +27,8 @@ export function StudioContent() {
     tables,
     toggleSidebar,
   } = useStudioContext();
+
+  const [tableErrorsDismissed, setTableErrorsDismissed] = useState(false);
 
   const failedTablesLabel =
     tableLoadErrors.length === 1
@@ -60,16 +65,24 @@ export function StudioContent() {
               {error}
             </div>
           ) : null}
-          {tableLoadErrors.length > 0 ? (
-            <div className="mx-3 mt-3 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-100">
-              <span className="font-medium">Some tables failed to load:</span>{" "}
-              {failedTablesLabel}
-              {tableLoadErrors.length > 1 ? (
-                <span className="ml-1 text-amber-700 dark:text-amber-200">
-                  ({tableLoadErrors.map((entry) => entry.tableName).slice(0, 3).join(", ")}
-                  {tableLoadErrors.length > 3 ? `, +${tableLoadErrors.length - 3} more` : ""})
-                </span>
-              ) : null}
+          {tableLoadErrors.length > 0 && !tableErrorsDismissed ? (
+            <div className="mx-3 mt-3 flex items-start gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-100">
+              <span className="flex-1">
+                <span className="font-medium">Some tables failed to load:</span>{" "}
+                {failedTablesLabel}
+                {tableLoadErrors.length > 1 ? (
+                  <span className="ml-1 text-amber-700 dark:text-amber-200">
+                    ({tableLoadErrors.map((entry) => entry.tableName).slice(0, 3).join(", ")}
+                    {tableLoadErrors.length > 3 ? `, +${tableLoadErrors.length - 3} more` : ""})
+                  </span>
+                ) : null}
+              </span>
+              <button
+                onClick={() => setTableErrorsDismissed(true)}
+                className="shrink-0 text-amber-700 hover:text-amber-950 dark:text-amber-300 dark:hover:text-amber-100"
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={14} />
+              </button>
             </div>
           ) : null}
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
