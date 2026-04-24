@@ -8,7 +8,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
 
-builder.Services.AddEFStudio();
+builder.Services.AddEFStudio<AppDbContext>();
 
 var app = builder.Build();
 
