@@ -8,7 +8,7 @@ interface TableListItemProps {
   onClick: () => void;
 }
 
-export function TableListItem({ name, displayName, rowCount, isSelected, onClick }: TableListItemProps) {
+export function TableListItem({ name: _name, displayName, rowCount, isSelected, onClick }: TableListItemProps) {
   return (
     <button
       onClick={onClick}

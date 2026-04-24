@@ -1,9 +1,14 @@
 import { Badge } from "@/components/ui/badge";
-import type { ColumnDef, FieldValue } from "@/types";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { ColumnDef, FieldValue, TableDef } from "@/types";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 
 interface DataTableCellProps {
   value: FieldValue;
   column: ColumnDef;
+  onJumpToRef?: (tableName: string, value: FieldValue) => void;
+  allTables: TableDef[];
 }
 
 function formatDatetime(raw: string): string {
@@ -14,7 +19,20 @@ function formatDatetime(raw: string): string {
   return `${date} ${time}`;
 }
 
-export function DataTableCell({ value, column }: DataTableCellProps) {
+function TruncatedText({ text, className }: { text: string; className?: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className={`truncate block w-full cursor-default ${className ?? ""}`}>{text}</span>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-xs break-all text-xs font-mono">
+        {text}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+export function DataTableCell({ value, column, onJumpToRef, allTables: _allTables }: DataTableCellProps) {
   if (value === null || value === undefined) {
     return <span className="text-muted-foreground italic text-xs">null</span>;
   }
@@ -31,36 +49,36 @@ export function DataTableCell({ value, column }: DataTableCellProps) {
     );
   }
 
-  if (column.isPrimaryKey || column.isForeignKey) {
-    const colorClass = column.isPrimaryKey
-      ? "text-primary"
-      : "text-blue-600 dark:text-blue-400";
+  if (column.isForeignKey && column.foreignKeyTable && onJumpToRef) {
     return (
-      <span
-        className={`font-mono text-xs ${colorClass} truncate block w-full`}
-        title={String(value)}
-      >
-        {String(value)}
-      </span>
+      <div className="flex items-center gap-1 min-w-0">
+        <TruncatedText
+          text={String(value)}
+          className="font-mono text-xs text-blue-600 dark:text-blue-400 min-w-0"
+        />
+        <button
+          onClick={(e) => { e.stopPropagation(); onJumpToRef(column.foreignKeyTable!, value); }}
+          className="opacity-0 group-hover:opacity-100 shrink-0 flex h-4 w-4 items-center justify-center rounded text-blue-500 hover:bg-blue-500/10 transition-all"
+          title={`Go to ${column.foreignKeyTable}`}
+        >
+          <HugeiconsIcon icon={ArrowRight01Icon} size={10} />
+        </button>
+      </div>
     );
+  }
+
+  if (column.isPrimaryKey) {
+    return <TruncatedText text={String(value)} className="font-mono text-xs text-primary" />;
   }
 
   if (column.type === "datetime") {
     const formatted = formatDatetime(String(value));
-    return (
-      <span className="text-xs tabular-nums text-muted-foreground truncate block w-full" title={formatted}>
-        {formatted}
-      </span>
-    );
+    return <TruncatedText text={formatted} className="text-xs tabular-nums text-muted-foreground" />;
   }
 
   if (column.type === "number") {
     return <span className="text-xs tabular-nums font-mono">{String(value)}</span>;
   }
 
-  return (
-    <span className="text-xs truncate block w-full" title={String(value)}>
-      {String(value)}
-    </span>
-  );
+  return <TruncatedText text={String(value)} className="text-xs" />;
 }

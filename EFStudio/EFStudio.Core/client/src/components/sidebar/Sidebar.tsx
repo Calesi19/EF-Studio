@@ -1,7 +1,7 @@
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import type { TableDef } from "@/types";
-import { SidebarHeader } from "./SidebarHeader";
+import { useState } from "react";
 import { TableListItem } from "./TableListItem";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -13,18 +13,28 @@ interface SidebarProps {
 }
 
 export function Sidebar({ tables, recordCounts, selectedTableName, onSelectTable }: SidebarProps) {
+  const [modelFilter, setModelFilter] = useState("");
+
+  const filteredTables = modelFilter.trim()
+    ? tables.filter((t) =>
+        t.displayName.toLowerCase().includes(modelFilter.toLowerCase()) ||
+        t.name.toLowerCase().includes(modelFilter.toLowerCase())
+      )
+    : tables;
+
   return (
     <div className="flex h-full flex-col">
-      <SidebarHeader />
-      <div className="px-3 py-1.5">
-        <p className="px-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-          Models
-        </p>
+      <div className="px-2 py-1.5 border-b border-sidebar-border">
+        <Input
+          placeholder="Models"
+          value={modelFilter}
+          onChange={(e) => setModelFilter(e.target.value)}
+          className="h-7 text-xs"
+        />
       </div>
-      <Separator className="bg-sidebar-border" />
       <ScrollArea className="flex-1 py-1">
         <div className="px-1.5 space-y-px">
-          {tables.map((table) => (
+          {filteredTables.map((table) => (
             <TableListItem
               key={table.name}
               name={table.name}
@@ -36,8 +46,7 @@ export function Sidebar({ tables, recordCounts, selectedTableName, onSelectTable
           ))}
         </div>
       </ScrollArea>
-      <Separator className="bg-sidebar-border" />
-      <div className="px-1.5 py-1.5">
+      <div className="px-1.5 py-1.5 border-t border-sidebar-border">
         <ThemeToggle />
       </div>
     </div>

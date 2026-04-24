@@ -1,3 +1,4 @@
+import { Checkbox } from "@/components/ui/checkbox";
 import { TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { ColumnDef, SortState } from "@/types";
 import { useEffect, useRef } from "react";
@@ -26,11 +27,11 @@ export function DataTableHeader({
   columnWidths,
   onResizeColumn,
 }: DataTableHeaderProps) {
-  const checkboxRef = useRef<HTMLInputElement>(null);
+  const checkboxRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (checkboxRef.current) {
-      checkboxRef.current.indeterminate = someSelected && !allSelected;
+      checkboxRef.current.dataset.state = someSelected && !allSelected ? "indeterminate" : allSelected ? "checked" : "unchecked";
     }
   }, [someSelected, allSelected]);
 
@@ -62,20 +63,19 @@ export function DataTableHeader({
 
   return (
     <TableHeader>
-      <TableRow className="bg-muted hover:bg-muted">
-        <TableHead className="px-3 py-1.5 h-auto border-r border-border">
-          <input
+      <TableRow className="hover:bg-transparent">
+        <TableHead className="sticky top-0 left-0 z-20 bg-muted px-3 py-1.5 h-auto border-b border-border shadow-[inset_-1px_0_0_var(--color-border),0_1px_3px_0_oklch(0_0_0/0.08)]">
+          <Checkbox
             ref={checkboxRef}
-            type="checkbox"
-            checked={allSelected}
-            onChange={onToggleAll}
-            className="h-3.5 w-3.5 cursor-pointer accent-primary"
+            checked={allSelected ? true : someSelected ? "indeterminate" : false}
+            onCheckedChange={onToggleAll}
+            className="h-3.5 w-3.5"
           />
         </TableHead>
         {columns.map((col) => (
           <TableHead
             key={col.name}
-            className="relative cursor-pointer select-none px-3 py-1.5 h-auto border-r border-border overflow-hidden"
+            className="sticky top-0 z-10 bg-muted relative cursor-pointer select-none px-3 py-1.5 h-auto border-r border-b border-border overflow-hidden shadow-[0_1px_3px_0_oklch(0_0_0/0.08)]"
             onClick={() => onSortChange(col.name)}
           >
             <div className="flex items-center gap-1.5 min-w-0 overflow-hidden pr-1">
@@ -89,7 +89,6 @@ export function DataTableHeader({
                 </span>
               )}
             </div>
-            {/* Resize handle */}
             <div
               className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/40 active:bg-primary/60 transition-colors z-10"
               onMouseDown={(e) => handleResizeStart(e, col.name)}
@@ -97,7 +96,6 @@ export function DataTableHeader({
             />
           </TableHead>
         ))}
-        <TableHead className="w-8 px-1 py-1.5 h-auto" />
       </TableRow>
     </TableHeader>
   );

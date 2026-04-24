@@ -1,5 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { TabState, TableDef } from "@/types";
+import { SidebarLeft01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 
 interface TabBarProps {
   tabs: TabState[];
@@ -9,14 +11,22 @@ interface TabBarProps {
   onActivate: (id: string) => void;
   onClose: (id: string) => void;
   onCloseAll: () => void;
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
 }
 
-export function TabBar({ tabs, activeTabId, tables, recordCounts, onActivate, onClose, onCloseAll }: TabBarProps) {
+export function TabBar({ tabs, activeTabId, tables, recordCounts: _recordCounts, onActivate, onClose, onCloseAll, sidebarOpen, onToggleSidebar }: TabBarProps) {
   return (
     <div className="flex border-b border-border bg-muted/30 overflow-x-auto shrink-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <button
+        onClick={onToggleSidebar}
+        className="flex h-9 w-9 shrink-0 items-center justify-center border-r border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+        title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+      >
+        <HugeiconsIcon icon={SidebarLeft01Icon} size={14} />
+      </button>
       {tabs.map((tab) => {
         const table = tables.find((t) => t.name === tab.tableName);
-        const count = recordCounts.get(tab.tableName) ?? 0;
         const isActive = tab.id === activeTabId;
 
         return (
@@ -31,7 +41,6 @@ export function TabBar({ tabs, activeTabId, tables, recordCounts, onActivate, on
             )}
           >
             <span>{table?.displayName ?? tab.tableName}</span>
-            <span className="text-[10px] tabular-nums text-muted-foreground">{count}</span>
             <button
               onClick={(e) => { e.stopPropagation(); onClose(tab.id); }}
               className={cn(
@@ -48,7 +57,7 @@ export function TabBar({ tabs, activeTabId, tables, recordCounts, onActivate, on
       {tabs.length >= 2 && (
         <button
           onClick={onCloseAll}
-          className="flex items-center gap-1 px-3 shrink-0 border-r border-border text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors h-9 select-none"
+          className="flex items-center gap-1 px-3 shrink-0 border-r border-border text-xs font-normal text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors h-9 select-none"
         >
           Close all
         </button>

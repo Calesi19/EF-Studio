@@ -1,7 +1,7 @@
 import { TableBody } from "@/components/ui/table";
 import { useTableState } from "@/hooks/useTableState";
-import type { ColumnDef, PaginationState, RecordRow, SortState } from "@/types";
-import { useEffect, useRef, useState } from "react";
+import type { ColumnDef, FieldValue, PaginationState, RecordRow, SortState, TableDef } from "@/types";
+import { useEffect, useState } from "react";
 import { DeleteConfirmDialog } from "../records/DeleteConfirmDialog";
 import { DataTableHeader } from "./DataTableHeader";
 import { DataTablePagination } from "./DataTablePagination";
@@ -35,6 +35,8 @@ interface DataTableProps {
   onEditRecord: (row: RecordRow) => void;
   onDeleteRecord: (row: RecordRow) => void;
   onBulkDelete: (rows: RecordRow[]) => void;
+  onJumpToRef: (tableName: string, value: FieldValue) => void;
+  allTables: TableDef[];
 }
 
 export function DataTable({
@@ -51,9 +53,9 @@ export function DataTable({
   onEditRecord,
   onDeleteRecord,
   onBulkDelete,
+  onJumpToRef,
+  allTables,
 }: DataTableProps) {
-  const headerRef = useRef<HTMLDivElement>(null);
-  const bodyRef = useRef<HTMLDivElement>(null);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => initialWidths(columns));
@@ -68,12 +70,6 @@ export function DataTable({
   const pkCol = columns.find((c) => c.isPrimaryKey);
   function getRowKey(row: RecordRow): string {
     return pkCol ? String(row[pkCol.name]) : JSON.stringify(row);
-  }
-
-  function syncHeaderScroll() {
-    if (headerRef.current && bodyRef.current) {
-      headerRef.current.scrollLeft = bodyRef.current.scrollLeft;
-    }
   }
 
   const { paginatedRows, totalRows, totalPages } = useTableState(rows, columns, filter, sort, pagination);
@@ -107,14 +103,13 @@ export function DataTable({
     setSelectedKeys(new Set());
   }
 
-  const tableWidth = 36 + columns.reduce((sum, col) => sum + (columnWidths[col.name] ?? colWidth(col)), 0) + 32;
+  const tableWidth = 36 + columns.reduce((sum, col) => sum + (columnWidths[col.name] ?? colWidth(col)), 0);
   const colgroup = (
     <colgroup>
       <col style={{ width: 36 }} />
       {columns.map((col) => (
         <col key={col.name} style={{ width: columnWidths[col.name] ?? colWidth(col) }} />
       ))}
-      <col style={{ width: 32 }} />
     </colgroup>
   );
 
@@ -127,48 +122,43 @@ export function DataTable({
         selectedCount={selectedKeys.size}
         onBulkDelete={() => setBulkDeleteOpen(true)}
       />
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        <div ref={headerRef} className="shrink-0 overflow-hidden border-b border-border bg-muted">
-          <table className="table-fixed" style={{ minWidth: tableWidth, width: tableWidth }}>
-            {colgroup}
-            <DataTableHeader
-              columns={columns}
-              sort={sort}
-              onSortChange={onSortChange}
-              allSelected={allSelected}
-              someSelected={someSelected}
-              onToggleAll={toggleAll}
-              columnWidths={columnWidths}
-              onResizeColumn={handleResizeColumn}
-            />
-          </table>
-        </div>
-        <div ref={bodyRef} className="flex-1 overflow-auto min-h-0" onScroll={syncHeaderScroll}>
-          <table className="table-fixed" style={{ minWidth: tableWidth, width: tableWidth }}>
-            {colgroup}
-            <TableBody>
-              {paginatedRows.length === 0 ? (
-                <tr>
-                  <td colSpan={columns.length + 2} className="py-16 text-center text-xs text-muted-foreground">
-                    {filter ? "No records match your filter." : "No records found."}
-                  </td>
-                </tr>
-              ) : (
-                paginatedRows.map((row, i) => (
-                  <DataTableRow
-                    key={i}
-                    row={row}
-                    columns={columns}
-                    isSelected={selectedKeys.has(getRowKey(row))}
-                    onToggleSelect={() => toggleRow(getRowKey(row))}
-                    onEdit={onEditRecord}
-                    onDelete={onDeleteRecord}
-                  />
-                ))
-              )}
-            </TableBody>
-          </table>
-        </div>
+      <div className="flex-1 overflow-auto min-h-0">
+        <table className="table-fixed" style={{ minWidth: tableWidth, width: tableWidth }}>
+          {colgroup}
+          <DataTableHeader
+            columns={columns}
+            sort={sort}
+            onSortChange={onSortChange}
+            allSelected={allSelected}
+            someSelected={someSelected}
+            onToggleAll={toggleAll}
+            columnWidths={columnWidths}
+            onResizeColumn={handleResizeColumn}
+          />
+          <TableBody>
+            {paginatedRows.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length + 1} className="py-16 text-center text-xs text-muted-foreground">
+                  {filter ? "No records match your filter." : "No records found."}
+                </td>
+              </tr>
+            ) : (
+              paginatedRows.map((row, i) => (
+                <DataTableRow
+                  key={i}
+                  row={row}
+                  columns={columns}
+                  isSelected={selectedKeys.has(getRowKey(row))}
+                  onToggleSelect={() => toggleRow(getRowKey(row))}
+                  onEdit={onEditRecord}
+                  onDelete={onDeleteRecord}
+                  onJumpToRef={onJumpToRef}
+                  allTables={allTables}
+                />
+              ))
+            )}
+          </TableBody>
+        </table>
       </div>
       <DataTablePagination
         pagination={pagination}

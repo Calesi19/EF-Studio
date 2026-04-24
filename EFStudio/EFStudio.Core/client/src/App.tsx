@@ -7,7 +7,7 @@ import { DataTable } from "@/components/table/DataTable";
 import { RecordDialog } from "@/components/records/RecordDialog";
 import { DeleteConfirmDialog } from "@/components/records/DeleteConfirmDialog";
 import { MOCK_TABLES } from "@/data/mock";
-import type { PaginationState, RecordRow, SortState, TabState } from "@/types";
+import type { FieldValue, PaginationState, RecordRow, SortState, TabState } from "@/types";
 
 const DEFAULT_SORT: SortState = { column: null, direction: "asc" };
 const DEFAULT_PAGINATION: PaginationState = { page: 1, pageSize: 10 };
@@ -25,6 +25,7 @@ export default function App() {
   const [records, setRecords] = useState<Map<string, RecordRow[]>>(initRecords);
   const [tabs, setTabs] = useState<TabState[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -58,6 +59,19 @@ export default function App() {
     }
   }
 
+  function handleJumpToRef(tableName: string, filterValue: FieldValue) {
+    const filter = filterValue !== null ? String(filterValue) : "";
+    const existing = tabs.find((t) => t.tableName === tableName);
+    if (existing) {
+      setTabs((prev) => prev.map((t) => t.id === existing.id ? { ...t, filter, pagination: DEFAULT_PAGINATION } : t));
+      setActiveTabId(existing.id);
+    } else {
+      const id = crypto.randomUUID();
+      setTabs((prev) => [...prev, { id, tableName, filter, sort: DEFAULT_SORT, pagination: DEFAULT_PAGINATION }]);
+      setActiveTabId(id);
+    }
+  }
+
   function handleCloseTab(id: string) {
     setTabs((prev) => {
       const idx = prev.findIndex((t) => t.id === id);
@@ -72,6 +86,11 @@ export default function App() {
   function handleCloseAll() {
     setTabs([]);
     setActiveTabId(null);
+  }
+
+  function handleToggleSidebar() {
+    if (tabs.length === 0) return;
+    setSidebarOpen((v) => !v);
   }
 
   function handleSortChange(column: string) {
@@ -146,10 +165,12 @@ export default function App() {
   }
 
   const recordCounts = new Map(tables.map((t) => [t.name, records.get(t.name)?.length ?? 0]));
+  const effectiveSidebarOpen = tabs.length === 0 ? true : sidebarOpen;
 
   return (
     <TooltipProvider>
       <AppShell
+        sidebarOpen={effectiveSidebarOpen}
         sidebar={
           <Sidebar
             tables={tables}
@@ -167,6 +188,8 @@ export default function App() {
           onActivate={setActiveTabId}
           onClose={handleCloseTab}
           onCloseAll={handleCloseAll}
+          sidebarOpen={effectiveSidebarOpen}
+          onToggleSidebar={handleToggleSidebar}
         />
         {selectedTable && activeTab ? (
           <>
@@ -185,6 +208,8 @@ export default function App() {
               onEditRecord={(row) => { setEditingRow(row); setEditOpen(true); }}
               onDeleteRecord={(row) => { setDeletingRow(row); setDeleteOpen(true); }}
               onBulkDelete={handleBulkDelete}
+              onJumpToRef={handleJumpToRef}
+              allTables={tables}
             />
             <RecordDialog
               mode="create"
