@@ -36,24 +36,18 @@ jobs:
         working-directory: ./EFStudio/EFStudio.Core/client
         run: npm run build
 
-      # 2. Sync React build to wwwroot (Ensures the DLL embeds the latest UI)
-      - name: Sync UI to wwwroot
-        run: |
-          rm -rf ./EFStudio/EFStudio.Core/wwwroot/*
-          cp -r ./EFStudio/EFStudio.Core/client/dist/* ./EFStudio/EFStudio.Core/wwwroot/
-
-      # 3. Restore and Build .NET
+      # 2. Restore and Build .NET
       - name: Restore dependencies
         run: dotnet restore EFStudio/EFStudio.sln
 
       - name: Build Solution
         run: dotnet build EFStudio/EFStudio.sln --configuration Release --no-restore
 
-      # 4. Run Unit Tests
+      # 3. Run Unit Tests
       - name: Test
         run: dotnet test EFStudio/EFStudio.sln --configuration Release --no-build --verbosity normal
 
-      # 5. Pack and Release (Only if a tag is pushed)
+      # 4. Pack and Release (Only if a tag is pushed)
       - name: Pack NuGet
         if: startsWith(github.ref, 'refs/tags/v')
         run: dotnet pack EFStudio/EFStudio.Core/EFStudio.Core.csproj --configuration Release --output ./artifacts
