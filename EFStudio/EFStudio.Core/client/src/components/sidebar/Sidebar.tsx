@@ -52,7 +52,7 @@ export function Sidebar({
           ))}
         </div>
       </ScrollArea>
-      <div className="px-1.5 py-1.5 border-t border-sidebar-border">
+      <div className="px-1.5 py-2.5 border-t border-sidebar-border">
         <ThemeToggle />
       </div>
     </div>
