@@ -65,7 +65,7 @@ public static class DbContextExtensions
         return (IQueryable<object>)
             context
                 .GetType()
-                .GetMethod("Set", [])!
+                .GetMethod("Set", Type.EmptyTypes)!
                 .MakeGenericMethod(entityType)
                 .Invoke(context, null)!;
     }
