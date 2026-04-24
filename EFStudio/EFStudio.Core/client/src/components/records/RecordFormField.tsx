@@ -33,7 +33,7 @@ export function RecordFormField({ column, value, onChange, mode, allTables }: Re
   const isDisabled = column.isPrimaryKey && mode === "edit";
 
   const fkTable = column.isForeignKey && column.foreignKeyTable
-    ? allTables.find((t) => t.name === column.foreignKeyTable)
+    ? allTables.find((t) => t.key === column.foreignKeyTable)
     : null;
 
   return (

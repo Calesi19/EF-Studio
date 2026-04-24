@@ -39,7 +39,7 @@ interface DataTableProps {
   onEditRecord: (row: RecordRow) => void;
   onDeleteRecord: (row: RecordRow) => void;
   onBulkDelete: (rows: RecordRow[]) => void;
-  onJumpToRef: (tableName: string, value: FieldValue) => void;
+  onJumpToRef: (tableKey: string, value: FieldValue) => void;
   readOnly?: boolean;
 }
 

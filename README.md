@@ -1,14 +1,14 @@
 # EF Studio
 
-**EF Studio** is a minimal, plug-and-play visual database editor for EF Core and PostgreSQL. Heavily inspired by Prisma Studio, it allows you to explore, edit, and manage your data directly from your browser with a single line of configuration in your ASP.NET Core application.
+**EF Studio** is a minimal, plug-and-play visual database browser for EF Core apps. Heavily inspired by Prisma Studio, it lets you inspect schema and records directly from your browser with a single line of configuration in your ASP.NET Core application.
 
 ![EFStudio Screenshot](./docs/banner.webp)
 
 ## Features
 
-- **Auto-Discovery**: Automatically maps your `DbContext` and PostgreSQL schemas.
-- **Zero Config**: No separate installation or database connection strings required—it uses your existing EF Core setup.
-- **CRUD Operations**: View, filter, create, update, and delete records through an intuitive interface.
+- **Auto-Discovery**: Automatically maps your `DbContext`, EF Core entities, and PostgreSQL schemas.
+- **Zero Config**: No separate installation or database connection strings required. It uses your existing EF Core setup.
+- **Read-Only Browsing**: View and filter records through an embedded interface without enabling writes.
 - **Development-Only**: Designed as a middleware that only runs in the `Development` environment.
 
 ## Installation
@@ -30,7 +30,7 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"))
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
 
 builder.Services.AddEFStudio<AppDbContext>();
@@ -51,22 +51,25 @@ By default, the studio will be available at `/efstudio` (e.g., `http://localhost
 
 While tools like pgAdmin and Azure Data Studio are powerful, they often require external connections and context switching. **EFStudio** lives inside your project:
 
-1. **Context Aware**: It understands your EF Core relations, navigations, and shadow properties.
+1. **Context Aware**: It understands your EF Core relations, navigations, and mapped schemas.
 2. **Minimal Footprint**: No need to manage credentials or connection strings in multiple places; if your API can connect to the DB, the Studio can too.
-3. **Workflow Integration**: Keep your database management in the same lifecycle as your API development.
+3. **Workflow Integration**: Keep database inspection in the same lifecycle as your API development.
 
 ## Requirements
 
 - .NET 6.0 or higher
 - Entity Framework Core 6.0+
-- Npgsql.EntityFrameworkCore.PostgreSQL
+- EF Core provider for your database
+- `Npgsql.EntityFrameworkCore.PostgreSQL` for PostgreSQL
+- `Microsoft.EntityFrameworkCore.Sqlite` for SQLite
 
 ## Roadmap
 
 - [ ] Support for complex many-to-many relationship editing.
 - [ ] Raw SQL query console.
 - [ ] Export data to CSV/JSON.
-- [ ] Support for other providers (SQL Server, SQLite).
+- [ ] Support for write operations.
+- [ ] Support for other providers (SQL Server).
 
 ## Contributing
 

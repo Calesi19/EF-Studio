@@ -17,8 +17,8 @@ type StudioContextType = {
   currentRows: TableDef["rows"];
   effectiveSidebarOpen: boolean;
   setActiveTabId: (id: string) => void;
-  selectTable: (name: string) => void;
-  jumpToReference: (tableName: string, filterValue: FieldValue) => void;
+  selectTable: (tableKey: string) => void;
+  jumpToReference: (tableKey: string, filterValue: FieldValue) => void;
   closeTab: (id: string) => void;
   closeAllTabs: () => void;
   toggleSidebar: () => void;
@@ -46,7 +46,7 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
   const { data: schema = [], isLoading: isSchemaLoading, error: schemaError } = useSchema();
 
   const tableDataQueries = useQueries({
-    queries: schema.map((table) => tableDataQueryOptions(table.name)),
+    queries: schema.map((table) => tableDataQueryOptions(table.key)),
   });
 
   const tables = schema.map((table, index) => ({
@@ -58,14 +58,14 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
   const loading = isSchemaLoading || tableDataQueries.some((query) => query.isLoading);
   const error = schemaError ? toErrorMessage(schemaError) : tableDataError ? toErrorMessage(tableDataError) : null;
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null;
-  const selectedTable = activeTab ? (tables.find((table) => table.name === activeTab.tableName) ?? null) : null;
+  const selectedTable = activeTab ? (tables.find((table) => table.key === activeTab.tableKey) ?? null) : null;
   const currentRows = selectedTable?.rows ?? [];
   const effectiveSidebarOpen = tabs.length === 0 ? true : sidebarOpen;
 
-  function createTab(tableName: string, filter = ""): TabState {
+  function createTab(tableKey: string, filter = ""): TabState {
     return {
       id: crypto.randomUUID(),
-      tableName,
+      tableKey,
       filter,
       sort: DEFAULT_SORT,
       pagination: DEFAULT_PAGINATION,
@@ -82,22 +82,22 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  function selectTable(name: string) {
-    const existingTab = tabs.find((tab) => tab.tableName === name);
+  function selectTable(tableKey: string) {
+    const existingTab = tabs.find((tab) => tab.tableKey === tableKey);
 
     if (existingTab) {
       setActiveTabId(existingTab.id);
       return;
     }
 
-    const nextTab = createTab(name);
+    const nextTab = createTab(tableKey);
     setTabs((previousTabs) => [...previousTabs, nextTab]);
     setActiveTabId(nextTab.id);
   }
 
-  function jumpToReference(tableName: string, filterValue: FieldValue) {
+  function jumpToReference(tableKey: string, filterValue: FieldValue) {
     const filter = filterValue !== null ? String(filterValue) : "";
-    const existingTab = tabs.find((tab) => tab.tableName === tableName);
+    const existingTab = tabs.find((tab) => tab.tableKey === tableKey);
 
     if (existingTab) {
       setTabs((previousTabs) =>
@@ -111,7 +111,7 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const nextTab = createTab(tableName, filter);
+    const nextTab = createTab(tableKey, filter);
     setTabs((previousTabs) => [...previousTabs, nextTab]);
     setActiveTabId(nextTab.id);
   }

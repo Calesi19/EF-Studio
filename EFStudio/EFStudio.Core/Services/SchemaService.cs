@@ -19,15 +19,15 @@ public class SchemaService
             .Model.GetEntityTypes()
             .Select(entityType =>
             {
-                // Get the actual table name in the DB
                 var tableName = entityType.GetTableName() ?? entityType.DisplayName();
-                var tableIdentifier = StoreObjectIdentifier.Table(
-                    tableName,
-                    entityType.GetSchema()
-                );
+                var schema = entityType.GetSchema();
+                var tableIdentifier = StoreObjectIdentifier.Table(tableName, schema);
+                var tableKey = TableKeyFactory.Create(schema, tableName);
 
                 return new TableInfoContract(
+                    tableKey,
                     tableName,
+                    schema,
                     entityType
                         .GetProperties()
                         .Select(property =>
@@ -40,7 +40,9 @@ public class SchemaService
                                 property.IsPrimaryKey(),
                                 property.IsNullable,
                                 foreignKey != null,
-                                foreignKey?.PrincipalEntityType.GetTableName()
+                                foreignKey == null
+                                    ? null
+                                    : TableKeyFactory.Create(foreignKey.PrincipalEntityType)
                             );
                         })
                         .ToList()

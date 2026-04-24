@@ -20,7 +20,9 @@ export interface ColumnDef {
 export type RecordRow = Record<string, FieldValue>;
 
 export interface TableDef {
+  key: string;
   name: string;
+  schema?: string;
   displayName: string;
   columns: ColumnDef[];
   rows: RecordRow[];
@@ -38,7 +40,7 @@ export interface PaginationState {
 
 export interface TabState {
   id: string;
-  tableName: string;
+  tableKey: string;
   filter: string;
   sort: SortState;
   pagination: PaginationState;

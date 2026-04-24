@@ -98,6 +98,7 @@ public class MiddlewareTests
         var dataResponse = JsonSerializer.Deserialize<TableDataResponse>(payload, JsonOptions);
 
         Assert.NotNull(dataResponse);
+        Assert.Equal("Users", dataResponse.Key);
         Assert.Equal("Users", dataResponse.Name);
         Assert.Equal(fakeUsers.Count, dataResponse.Rows.Count);
 
@@ -108,7 +109,12 @@ public class MiddlewareTests
         Assert.Equal(expectedUser.Email, GetJsonValue(row, "email", "Email").GetString());
     }
 
-    private sealed record TableDataResponse(string Name, List<Dictionary<string, JsonElement>> Rows);
+    private sealed record TableDataResponse(
+        string Key,
+        string Name,
+        string? Schema,
+        List<Dictionary<string, JsonElement>> Rows
+    );
 
     private static JsonElement GetJsonValue(
         IReadOnlyDictionary<string, JsonElement> row,

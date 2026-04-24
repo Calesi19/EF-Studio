@@ -2,16 +2,19 @@ import { cn } from "@/lib/utils";
 
 interface TableListItemProps {
   name: string;
+  schema?: string;
   displayName: string;
   isSelected: boolean;
   onClick: () => void;
 }
 
-export function TableListItem({ name, displayName, isSelected, onClick }: TableListItemProps) {
+export function TableListItem({ name, schema, displayName, isSelected, onClick }: TableListItemProps) {
+  const title = schema ? `${schema}.${name}` : name;
+
   return (
     <button
       onClick={onClick}
-      title={name}
+      title={title}
       className={cn(
         "flex w-full items-center justify-between rounded px-2 py-1 text-left text-xs transition-colors",
         isSelected

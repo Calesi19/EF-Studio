@@ -19,20 +19,24 @@ public class DataService
     {
         var entityType = dbContext
             .Model.GetEntityTypes()
-            .FirstOrDefault(t => t.GetTableName() == request.TableName);
+            .FirstOrDefault(t => TableKeyFactory.Create(t) == request.TableKey);
 
         if (entityType == null)
         {
             _logger.LogWarning(
-                "EFStudio table data requested for unknown table {TableName}.",
-                request.TableName
+                "EFStudio table data requested for unknown table {TableKey}.",
+                request.TableKey
             );
             return null;
         }
 
-        _logger.LogInformation("Loading EFStudio table data for {TableName}.", request.TableName);
+        var tableName = entityType.GetTableName() ?? entityType.DisplayName();
+        var schema = entityType.GetSchema();
+        var tableKey = TableKeyFactory.Create(schema, tableName);
 
-        var tableIdentifier = StoreObjectIdentifier.Table(request.TableName, entityType.GetSchema());
+        _logger.LogInformation("Loading EFStudio table data for {TableKey}.", tableKey);
+
+        var tableIdentifier = StoreObjectIdentifier.Table(tableName, schema);
         var properties = entityType.GetProperties().ToList();
 
         var results = await dbContext
@@ -50,7 +54,7 @@ public class DataService
             )
             .ToList();
 
-        return new TableDataResponseContract(request.TableName, rows);
+        return new TableDataResponseContract(tableKey, tableName, schema, rows);
     }
 }
 

@@ -10,7 +10,7 @@ const COPY_FEEDBACK_DURATION_MS = 1500;
 interface DataTableCellProps {
   value: FieldValue;
   column: ColumnDef;
-  onJumpToRef?: (tableName: string, value: FieldValue) => void;
+  onJumpToRef?: (tableKey: string, value: FieldValue) => void;
 }
 
 function formatDatetime(raw: string): string {

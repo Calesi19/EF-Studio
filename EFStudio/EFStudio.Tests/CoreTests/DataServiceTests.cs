@@ -24,6 +24,7 @@ public class DataServiceTests : TestDatabaseBase
 
         // Assert
         Assert.NotNull(result);
+        Assert.Equal("Users", result.Key);
         Assert.Equal(fakeUsers.Count, result.Rows.Count);
 
         var firstExpectedUser = fakeUsers[0];

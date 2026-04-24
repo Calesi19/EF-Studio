@@ -43,8 +43,8 @@ public class EFStudioMiddleware
 
             if (path.Equals(DataPath, StringComparison.OrdinalIgnoreCase))
             {
-                var tableName = context.Request.Query["table"].ToString();
-                if (string.IsNullOrEmpty(tableName))
+                var tableKey = context.Request.Query["table"].ToString();
+                if (string.IsNullOrEmpty(tableKey))
                 {
                     await WriteErrorAsync(
                         context,
@@ -54,7 +54,7 @@ public class EFStudioMiddleware
                     return;
                 }
 
-                var request = new TableDataRequestContract(tableName);
+                var request = new TableDataRequestContract(tableKey);
                 var data = await dataService.GetTableDataAsync(
                     dbContext,
                     request,
@@ -66,7 +66,7 @@ public class EFStudioMiddleware
                     await WriteErrorAsync(
                         context,
                         StatusCodes.Status404NotFound,
-                        $"The table '{tableName}' could not be found."
+                        $"The table '{tableKey}' could not be found."
                     );
                     return;
                 }

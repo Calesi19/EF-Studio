@@ -7,13 +7,13 @@ import { ThemeToggle } from "./ThemeToggle";
 
 interface SidebarProps {
   tables: TableDef[];
-  selectedTableName: string | null;
-  onSelectTable: (name: string) => void;
+  selectedTableKey: string | null;
+  onSelectTable: (tableKey: string) => void;
 }
 
 export function Sidebar({
   tables,
-  selectedTableName,
+  selectedTableKey,
   onSelectTable,
 }: SidebarProps) {
   const [modelFilter, setModelFilter] = useState("");
@@ -40,11 +40,12 @@ export function Sidebar({
         <div className="px-1.5 space-y-px">
           {filteredTables.map((table) => (
             <TableListItem
-              key={table.name}
+              key={table.key}
               name={table.name}
+              schema={table.schema}
               displayName={table.displayName}
-              isSelected={selectedTableName === table.name}
-              onClick={() => onSelectTable(table.name)}
+              isSelected={selectedTableKey === table.key}
+              onClick={() => onSelectTable(table.key)}
             />
           ))}
         </div>

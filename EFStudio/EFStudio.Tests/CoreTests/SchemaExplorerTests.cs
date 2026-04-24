@@ -16,6 +16,8 @@ public class SchemaExplorerTests : TestDatabaseBase
         // Assert
         var userTable = schema.FirstOrDefault(t => t.Name == "Users");
         Assert.NotNull(userTable);
+        Assert.Equal("Users", userTable.Key);
+        Assert.Null(userTable.Schema);
         Assert.Contains(userTable.Columns, c => c.Name == "Id");
         Assert.Contains(userTable.Columns, c => c.Name == "Name");
         Assert.Contains(userTable.Columns, c => c.Name == "Email");

@@ -1,3 +1,3 @@
 namespace EFStudio.Core.Contracts;
 
-public record TableDataRequestContract(string TableName);
+public record TableDataRequestContract(string TableKey);

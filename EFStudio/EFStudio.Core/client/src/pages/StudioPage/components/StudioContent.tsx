@@ -28,7 +28,7 @@ export function StudioContent() {
       sidebar={
         <Sidebar
           tables={tables}
-          selectedTableName={activeTab?.tableName ?? null}
+          selectedTableKey={activeTab?.tableKey ?? null}
           onSelectTable={selectTable}
         />
       }

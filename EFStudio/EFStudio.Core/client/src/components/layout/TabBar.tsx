@@ -27,7 +27,7 @@ export function TabBar({ tabs, activeTabId, tables, onActivate, onClose, onClose
         </button>
       )}
       {tabs.map((tab) => {
-        const table = tables.find((t) => t.name === tab.tableName);
+        const table = tables.find((t) => t.key === tab.tableKey);
         const isActive = tab.id === activeTabId;
 
         return (
@@ -41,7 +41,7 @@ export function TabBar({ tabs, activeTabId, tables, onActivate, onClose, onClose
                 : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
             )}
           >
-            <span>{table?.displayName ?? tab.tableName}</span>
+            <span>{table?.displayName ?? tab.tableKey}</span>
             <button
               onClick={(e) => { e.stopPropagation(); onClose(tab.id); }}
               className={cn(

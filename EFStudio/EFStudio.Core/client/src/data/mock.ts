@@ -44,6 +44,7 @@ const orderIds = Array.from({ length: 15 }, (_, i) =>
 
 export const MOCK_TABLES: TableDef[] = [
   {
+    key: "User",
     name: "User",
     displayName: "Users",
     columns: [
@@ -69,6 +70,7 @@ export const MOCK_TABLES: TableDef[] = [
     ],
   },
   {
+    key: "Post",
     name: "Post",
     displayName: "Posts",
     columns: [
@@ -102,6 +104,7 @@ export const MOCK_TABLES: TableDef[] = [
     ],
   },
   {
+    key: "Tag",
     name: "Tag",
     displayName: "Tags",
     columns: [
@@ -128,6 +131,7 @@ export const MOCK_TABLES: TableDef[] = [
     ],
   },
   {
+    key: "Order",
     name: "Order",
     displayName: "Orders",
     columns: [
@@ -175,6 +179,7 @@ export const MOCK_TABLES: TableDef[] = [
     ],
   },
   {
+    key: "PostTag",
     name: "PostTag",
     displayName: "Post Tags",
     columns: [

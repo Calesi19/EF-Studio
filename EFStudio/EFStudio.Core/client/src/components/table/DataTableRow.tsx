@@ -10,7 +10,7 @@ interface DataTableRowProps {
   onToggleSelect: () => void;
   onEdit: (row: RecordRow) => void;
   onDelete: (row: RecordRow) => void;
-  onJumpToRef: (tableName: string, value: FieldValue) => void;
+  onJumpToRef: (tableKey: string, value: FieldValue) => void;
   readOnly?: boolean;
 }
 
