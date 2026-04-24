@@ -165,8 +165,8 @@ export function DataTable({
         onBulkDelete={() => setBulkDeleteOpen(true)}
         readOnly={readOnly}
       />
-      <div className="flex-1 overflow-auto min-h-0 overscroll-none">
-        <table className="table-fixed" style={{ minWidth: tableWidth, width: tableWidth }}>
+      <div className="relative min-h-0 flex-1 overflow-auto overscroll-none">
+        <table className="table-fixed border-separate border-spacing-0" style={{ minWidth: tableWidth, width: tableWidth }}>
           {colgroup}
           <DataTableHeader
             columns={orderedColumns}

@@ -77,10 +77,10 @@ export function DataTableHeader({
   }
 
   return (
-    <TableHeader>
+    <TableHeader className="sticky top-0 z-20">
       <TableRow className="hover:bg-transparent">
         {!readOnly && (
-          <TableHead className="sticky top-0 left-0 z-20 bg-muted px-0 py-1.5 h-auto border-b border-border align-middle shadow-[inset_-1px_0_0_var(--color-border),0_1px_3px_0_oklch(0_0_0/0.08)]">
+          <TableHead className="sticky top-0 left-0 z-30 bg-muted px-0 py-1.5 h-auto border-b border-border align-middle shadow-[inset_-1px_0_0_var(--color-border),0_1px_3px_0_oklch(0_0_0/0.08)]">
             <div className="flex justify-center">
               <Checkbox
                 ref={checkboxRef}
@@ -100,7 +100,7 @@ export function DataTableHeader({
             onDrop={(e) => { e.preventDefault(); onDrop(col.name); }}
             onDragEnd={onDragEnd}
             className={cn(
-              "sticky top-0 z-10 bg-muted relative select-none px-3 py-1.5 h-auto border-r border-b border-border overflow-hidden shadow-[0_1px_3px_0_oklch(0_0_0/0.08)]",
+              "sticky top-0 z-20 bg-muted relative select-none px-3 py-1.5 h-auto border-r border-b border-border overflow-hidden shadow-[0_1px_3px_0_oklch(0_0_0/0.08)]",
               draggedCol === col.name ? "opacity-40 cursor-grabbing" : "cursor-grab",
               dragOverCol === col.name && draggedCol !== col.name && "border-l-2 border-l-primary"
             )}
