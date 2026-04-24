@@ -7,14 +7,12 @@ import { ThemeToggle } from "./ThemeToggle";
 
 interface SidebarProps {
   tables: TableDef[];
-  recordCounts: Map<string, number>;
   selectedTableName: string | null;
   onSelectTable: (name: string) => void;
 }
 
 export function Sidebar({
   tables,
-  recordCounts,
   selectedTableName,
   onSelectTable,
 }: SidebarProps) {
@@ -45,7 +43,6 @@ export function Sidebar({
               key={table.name}
               name={table.name}
               displayName={table.displayName}
-              rowCount={recordCounts.get(table.name) ?? 0}
               isSelected={selectedTableName === table.name}
               onClick={() => onSelectTable(table.name)}
             />

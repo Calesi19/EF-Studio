@@ -15,7 +15,6 @@ type StudioContextType = {
   activeTab: TabState | null;
   selectedTable: TableDef | null;
   currentRows: TableDef["rows"];
-  recordCounts: Map<string, number>;
   effectiveSidebarOpen: boolean;
   setActiveTabId: (id: string) => void;
   selectTable: (name: string) => void;
@@ -61,7 +60,6 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null;
   const selectedTable = activeTab ? (tables.find((table) => table.name === activeTab.tableName) ?? null) : null;
   const currentRows = selectedTable?.rows ?? [];
-  const recordCounts = new Map(tables.map((table) => [table.name, table.rows.length]));
   const effectiveSidebarOpen = tabs.length === 0 ? true : sidebarOpen;
 
   function createTab(tableName: string, filter = ""): TabState {
@@ -201,7 +199,6 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
         activeTab,
         selectedTable,
         currentRows,
-        recordCounts,
         effectiveSidebarOpen,
         setActiveTabId,
         selectTable,

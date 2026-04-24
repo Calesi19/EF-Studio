@@ -3,12 +3,11 @@ import { cn } from "@/lib/utils";
 interface TableListItemProps {
   name: string;
   displayName: string;
-  rowCount: number;
   isSelected: boolean;
   onClick: () => void;
 }
 
-export function TableListItem({ name, displayName, rowCount, isSelected, onClick }: TableListItemProps) {
+export function TableListItem({ name, displayName, isSelected, onClick }: TableListItemProps) {
   return (
     <button
       onClick={onClick}
@@ -24,7 +23,6 @@ export function TableListItem({ name, displayName, rowCount, isSelected, onClick
         <span className="text-muted-foreground text-xs font-mono shrink-0">▸</span>
         <span className="truncate">{displayName}</span>
       </div>
-      <span className="ml-2 shrink-0 text-xs text-muted-foreground tabular-nums">{rowCount}</span>
     </button>
   );
 }

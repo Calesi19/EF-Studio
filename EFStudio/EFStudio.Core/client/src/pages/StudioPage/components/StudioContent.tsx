@@ -14,7 +14,6 @@ export function StudioContent() {
     effectiveSidebarOpen,
     error,
     loading,
-    recordCounts,
     selectedTable,
     selectTable,
     setActiveTabId,
@@ -29,7 +28,6 @@ export function StudioContent() {
       sidebar={
         <Sidebar
           tables={tables}
-          recordCounts={recordCounts}
           selectedTableName={activeTab?.tableName ?? null}
           onSelectTable={selectTable}
         />
@@ -39,7 +37,6 @@ export function StudioContent() {
         tabs={tabs}
         activeTabId={activeTabId}
         tables={tables}
-        recordCounts={recordCounts}
         onActivate={setActiveTabId}
         onClose={closeTab}
         onCloseAll={closeAllTabs}
