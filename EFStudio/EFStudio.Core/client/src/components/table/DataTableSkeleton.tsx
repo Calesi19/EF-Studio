@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import { TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { ColumnDef } from "@/types";
 import { ColumnTypeBadge } from "./ColumnTypeBadge";
@@ -28,8 +29,13 @@ export function DataTableSkeleton({ columns, pageSize }: DataTableSkeletonProps)
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex items-center justify-between gap-3 px-4 py-2 border-b border-border">
-        <Skeleton className="h-7 w-56" />
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2">
+        <Input
+          placeholder="Filter records..."
+          value=""
+          disabled
+          className="h-7 w-56 text-xs"
+        />
         <Skeleton className="h-7 w-24" />
       </div>
 
