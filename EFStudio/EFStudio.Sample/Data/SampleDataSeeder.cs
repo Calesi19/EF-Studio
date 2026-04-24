@@ -202,7 +202,7 @@ public static class SampleDataSeeder
                     Email = faker.Internet.Email(firstName, lastName, $"{company.Slug}.dev").ToLowerInvariant(),
                     BirthDate = DateOnly.FromDateTime(faker.Date.Past(35, utcNow.AddYears(-23))),
                     HireDateUtc = faker.Date.Past(8, utcNow.AddMonths(-2)).ToUniversalTime(),
-                    LastSeenAt = faker.Date.RecentOffset(30),
+                    LastSeenAt = faker.Date.RecentOffset(30).ToUniversalTime(),
                     PreferredStartTime = TimeOnly.FromDateTime(faker.Date.Between(utcNow.Date.AddHours(6), utcNow.Date.AddHours(10).AddMinutes(30))),
                     Salary = faker.Random.Decimal(52_000m, 162_000m),
                     BonusRate = faker.Random.Float(0.00f, 0.25f),
