@@ -4,7 +4,9 @@ import { useQueries } from "@tanstack/react-query";
 import { tableDataQueryOptions } from "@/api/data/fetchTableData";
 import { useSchema } from "@/api/schema/fetchSchema";
 import type { FieldValue, SortState, TableDef, TabState } from "@/types";
-import { DEFAULT_PAGE_NUMBER, DEFAULT_PAGINATION, DEFAULT_SORT } from "@/pages/StudioPage/constants";
+import { DEFAULT_PAGE_NUMBER, DEFAULT_PAGE_SIZE, DEFAULT_SORT } from "@/pages/StudioPage/constants";
+
+const STORAGE_KEY_PAGE_SIZE = "ef-studio-page-size";
 
 type StudioContextType = {
   tables: TableDef[];
@@ -46,6 +48,11 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
   const [tabs, setTabs] = useState<TabState[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [pageSize, setPageSize] = useState<number>(() => {
+    const stored = localStorage.getItem(STORAGE_KEY_PAGE_SIZE);
+    const parsed = stored ? Number(stored) : NaN;
+    return Number.isFinite(parsed) ? parsed : DEFAULT_PAGE_SIZE;
+  });
   const { data: schema = [], isLoading: isSchemaLoading, error: schemaError } = useSchema();
 
   const openTableKeys = [...new Set(tabs.map((tab) => tab.tableKey))];
@@ -86,7 +93,7 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
       tableKey,
       filter,
       sort: DEFAULT_SORT,
-      pagination: DEFAULT_PAGINATION,
+      pagination: { page: DEFAULT_PAGE_NUMBER, pageSize },
     };
   }
 
@@ -121,7 +128,7 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
       setTabs((previousTabs) =>
         previousTabs.map((tab) =>
           tab.id === existingTab.id
-            ? { ...tab, filter, pagination: DEFAULT_PAGINATION }
+            ? { ...tab, filter, pagination: { page: DEFAULT_PAGE_NUMBER, pageSize } }
             : tab,
         ),
       );
@@ -189,10 +196,15 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function changePageSize(pageSize: number) {
-    updateActiveTab({
-      pagination: { page: DEFAULT_PAGE_NUMBER, pageSize },
-    });
+  function changePageSize(newSize: number) {
+    setPageSize(newSize);
+    localStorage.setItem(STORAGE_KEY_PAGE_SIZE, String(newSize));
+    setTabs((prev) =>
+      prev.map((tab) => ({
+        ...tab,
+        pagination: { page: DEFAULT_PAGE_NUMBER, pageSize: newSize },
+      }))
+    );
   }
 
   function changeFilter(filter: string) {
