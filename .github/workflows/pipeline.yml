@@ -1,0 +1,67 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - "v*"
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # 1. Build the React Frontend
+      - name: Install Frontend Dependencies
+        working-directory: ./EFStudio/EFStudio.Core/client
+        run: npm install
+
+      - name: Build Frontend
+        working-directory: ./EFStudio/EFStudio.Core/client
+        run: npm run build
+
+      # 2. Sync React build to wwwroot (Ensures the DLL embeds the latest UI)
+      - name: Sync UI to wwwroot
+        run: |
+          rm -rf ./EFStudio/EFStudio.Core/wwwroot/*
+          cp -r ./EFStudio/EFStudio.Core/client/dist/* ./EFStudio/EFStudio.Core/wwwroot/
+
+      # 3. Restore and Build .NET
+      - name: Restore dependencies
+        run: dotnet restore EFStudio/EFStudio.sln
+
+      - name: Build Solution
+        run: dotnet build EFStudio/EFStudio.sln --configuration Release --no-restore
+
+      # 4. Run Unit Tests
+      - name: Test
+        run: dotnet test EFStudio/EFStudio.sln --configuration Release --no-build --verbosity normal
+
+      # 5. Pack and Release (Only if a tag is pushed)
+      - name: Pack NuGet
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: dotnet pack EFStudio/EFStudio.Core/EFStudio.Core.csproj --configuration Release --output ./artifacts
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./artifacts/*.nupkg
+            ./EFStudio/EFStudio.Core/bin/Release/net10.0/EFStudio.Core.dll
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
