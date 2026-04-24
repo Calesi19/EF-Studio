@@ -1,6 +1,0 @@
-@EFStudio.Sample_HostAddress = http://localhost:5175
-
-GET {{EFStudio.Sample_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
