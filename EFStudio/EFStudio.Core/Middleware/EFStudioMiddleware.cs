@@ -2,6 +2,7 @@ using System.Text.Json;
 using EFStudio.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace EFStudio.Core.Middleware;
 
@@ -12,8 +13,16 @@ public class EFStudioMiddleware
 
     public EFStudioMiddleware(RequestDelegate next) => _next = next;
 
-    public async Task InvokeAsync(HttpContext context, DbContext dbContext, SchemaExplorer explorer)
+    // Add a generic constraint to your class or just the method
+    public async Task InvokeAsync(
+        HttpContext context,
+        SchemaExplorer explorer,
+        IServiceProvider serviceProvider
+    )
     {
+        // Resolve the DbContext dynamically from the scope
+        // This finds whatever DbContext was registered in Program.cs
+        var dbContext = serviceProvider.GetRequiredService<DbContext>();
         var path = context.Request.Path.Value ?? "";
 
         // 1. Handle API Request for Schema
@@ -22,6 +31,25 @@ public class EFStudioMiddleware
             var schema = explorer.GetSchema(dbContext);
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsync(JsonSerializer.Serialize(schema));
+            return;
+        }
+
+        // Inside InvokeAsync...
+        if (path.Equals($"{_rootPath}/api/data", StringComparison.OrdinalIgnoreCase))
+        {
+            var tableName = context.Request.Query["table"].ToString();
+            if (string.IsNullOrEmpty(tableName))
+            {
+                context.Response.StatusCode = 400;
+                return;
+            }
+
+            var dataService = serviceProvider.GetRequiredService<DataService>();
+            var data = await dataService.GetTableDataAsync(dbContext, tableName);
+
+            context.Response.ContentType = "application/json";
+            // We use a simple serialize here; .NET 10 handles the dynamic objects well.
+            await context.Response.WriteAsync(JsonSerializer.Serialize(data));
             return;
         }
 
@@ -39,23 +67,23 @@ public class EFStudioMiddleware
     {
         var assembly = typeof(EFStudioMiddleware).Assembly;
 
-        // Default to index.html for the root or deep-links (SPA routing)
+        // Normalize path logic
         string resourcePath =
             path.Length <= _rootPath.Length ? "index.html" : path.Substring(_rootPath.Length + 1);
         if (string.IsNullOrEmpty(resourcePath))
             resourcePath = "index.html";
 
-        // Map path to your manifest resource name (Namespace.Folder.File)
+        // IMPORTANT: .NET resource names use dots, not slashes.
+        // Example: EFStudio.Core.wwwroot.index.html
         var manifestPath = $"EFStudio.Core.wwwroot.{resourcePath.Replace("/", ".")}";
 
         using var stream = assembly.GetManifestResourceStream(manifestPath);
+
         if (stream == null)
         {
-            // Fallback to index.html for SPA support
-            using var indexStream = assembly.GetManifestResourceStream(
-                "EFStudio.Core.wwwroot.index.html"
-            );
-            await indexStream!.CopyToAsync(context.Response.Body);
+            // Log the missing resource to console so you can see the name it was looking for
+            Console.WriteLine($"[EFStudio] Resource not found: {manifestPath}");
+            context.Response.StatusCode = 404;
             return;
         }
 
