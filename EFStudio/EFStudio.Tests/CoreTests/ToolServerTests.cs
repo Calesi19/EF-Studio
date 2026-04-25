@@ -21,7 +21,7 @@ public class ToolServerTests
         var port = GetAvailablePort();
         var server = new StudioServer();
         await using var handle = await server.StartAsync(
-            new StudioServerOptions($"http://127.0.0.1:{port}"),
+            new StudioServerOptions($"http://localhost:{port}"),
             catalog,
             cancellationTokenSource.Token
         );

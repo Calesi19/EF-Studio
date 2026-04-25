@@ -356,7 +356,7 @@ public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFix
         );
 
         return server.StartAsync(
-            new StudioServerOptions($"http://127.0.0.1:{port}"),
+            new StudioServerOptions($"http://localhost:{port}"),
             catalog,
             CancellationToken.None
         );

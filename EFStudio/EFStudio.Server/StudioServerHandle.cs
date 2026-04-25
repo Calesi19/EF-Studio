@@ -3,9 +3,10 @@ using Microsoft.Extensions.Hosting;
 
 namespace EFStudio.Server;
 
-public sealed class StudioServerHandle(WebApplication app, Uri studioUri) : IAsyncDisposable
+public sealed class StudioServerHandle(WebApplication app, Uri baseUri) : IAsyncDisposable
 {
-    public Uri StudioUri { get; } = studioUri;
+    public Uri BaseUri { get; } = baseUri;
+    public Uri StudioUri { get; } = new(baseUri, "/efstudio/");
 
     public Task WaitForShutdownAsync(CancellationToken cancellationToken = default) =>
         app.WaitForShutdownAsync(cancellationToken);

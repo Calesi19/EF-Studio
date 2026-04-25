@@ -24,6 +24,7 @@ public sealed class StudioServer
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls(options.Url);
         builder.Logging.ClearProviders();
+        builder.Logging.SetMinimumLevel(LogLevel.Warning);
         builder.Logging.AddSimpleConsole(console =>
         {
             console.SingleLine = true;
@@ -233,7 +234,7 @@ public sealed class StudioServer
         );
 
         await app.StartAsync(cancellationToken);
-        return new StudioServerHandle(app, options.StudioUri);
+        return new StudioServerHandle(app, GetBaseUri(app, options));
     }
 
     private static int ParseInt(string? value, int fallback)
@@ -248,5 +249,13 @@ public sealed class StudioServer
             : exception.GetBaseException();
 
         return effectiveException.Message;
+    }
+
+    private static Uri GetBaseUri(WebApplication app, StudioServerOptions options)
+    {
+        var address = app.Urls.FirstOrDefault();
+        return Uri.TryCreate(address, UriKind.Absolute, out var baseUri)
+            ? baseUri
+            : options.BaseUri;
     }
 }
