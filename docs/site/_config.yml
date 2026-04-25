@@ -1,0 +1,12 @@
+title: EFStudio
+description: Minimal visual database studio for EF Core apps.
+baseurl: "/EF-Studio"
+url: "https://carloslespin.github.io"
+markdown: kramdown
+kramdown:
+  input: GFM
+permalink: pretty
+plugins: []
+exclude:
+  - Gemfile
+  - Gemfile.lock
