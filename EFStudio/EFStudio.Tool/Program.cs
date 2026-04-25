@@ -1,16 +1,6 @@
 using System.Diagnostics;
-using System.Net;
-using System.Net.Sockets;
-using System.Reflection;
-using EFStudio.Core.Services;
-using EFStudio.Server;
-
-var cancellationTokenSource = new CancellationTokenSource();
-Console.CancelKeyPress += (_, eventArgs) =>
-{
-    eventArgs.Cancel = true;
-    cancellationTokenSource.Cancel();
-};
+using System.Text.RegularExpressions;
+using System.Text.Json;
 
 try
 {
@@ -21,57 +11,37 @@ try
         return 0;
     }
 
-    var loader = new DbContextCatalogLoader();
-    await using var catalog = await loader.LoadAsync(
-        new DbContextDiscoveryOptions(
-            Environment.CurrentDirectory,
-            options.ProjectPath,
-            options.StartupProjectPath
-        ),
-        cancellationTokenSource.Token
+    var projectPath = ResolveProjectPath(options.ProjectPath, Environment.CurrentDirectory, "project");
+    var startupProjectPath = ResolveProjectPath(
+        options.StartupProjectPath,
+        Environment.CurrentDirectory,
+        "startup project",
+        defaultPath: projectPath
     );
 
-    if (!string.IsNullOrWhiteSpace(options.ContextName) && !catalog.SelectContext(options.ContextName))
-    {
-        Console.Error.WriteLine($"EFStudio could not find an available DbContext named '{options.ContextName}'.");
-        return 1;
-    }
+    var startupFramework = await GetSelectedTargetFrameworkAsync(startupProjectPath);
+    var workerFramework = GetSupportedWorkerFramework(startupFramework);
+    var workerDllPath = GetWorkerDllPath(workerFramework);
 
-    var availableContexts = catalog.GetAvailableContexts();
-    if (availableContexts.Count == 0 || availableContexts.All(context => !context.IsAvailable))
+    var process = new Process
     {
-        foreach (var context in availableContexts)
+        StartInfo = new ProcessStartInfo
         {
-            if (!string.IsNullOrWhiteSpace(context.ActivationError))
-            {
-                Console.Error.WriteLine($"{context.Name}: {context.ActivationError}");
-            }
-        }
+            FileName = "dotnet",
+            UseShellExecute = false,
+            WorkingDirectory = Environment.CurrentDirectory,
+        },
+    };
 
-        return 1;
-    }
-
-    var port = options.Port ?? SelectPreferredPort(5123);
-    var server = new StudioServer();
-    await using var handle = await server.StartAsync(
-        new StudioServerOptions($"http://localhost:{port}"),
-        catalog,
-        cancellationTokenSource.Token
-    );
-
-    PrintStartupBanner(handle.BaseUri, handle.StudioUri, options.NoBrowser);
-
-    if (!options.NoBrowser)
+    process.StartInfo.ArgumentList.Add(workerDllPath);
+    foreach (var argument in args)
     {
-        TryOpenBrowser(handle.StudioUri);
+        process.StartInfo.ArgumentList.Add(argument);
     }
 
-    await handle.WaitForShutdownAsync(cancellationTokenSource.Token);
-    return 0;
-}
-catch (OperationCanceledException)
-{
-    return 0;
+    process.Start();
+    await process.WaitForExitAsync();
+    return process.ExitCode;
 }
 catch (Exception exception)
 {
@@ -79,151 +49,173 @@ catch (Exception exception)
     return 1;
 }
 
-static int SelectPreferredPort(int preferredPort)
+static string ResolveProjectPath(
+    string? value,
+    string workingDirectory,
+    string description,
+    string? defaultPath = null
+)
 {
-    if (CanBind(preferredPort))
+    if (string.IsNullOrWhiteSpace(value))
     {
-        return preferredPort;
-    }
-
-    using var listener = new TcpListener(IPAddress.Loopback, 0);
-    listener.Start();
-    return ((IPEndPoint)listener.LocalEndpoint).Port;
-}
-
-static bool CanBind(int port)
-{
-    try
-    {
-        using var listener = new TcpListener(IPAddress.Loopback, port);
-        listener.Start();
-        return true;
-    }
-    catch (SocketException)
-    {
-        return false;
-    }
-}
-
-static void TryOpenBrowser(Uri uri)
-{
-    try
-    {
-        Process.Start(new ProcessStartInfo
+        if (!string.IsNullOrWhiteSpace(defaultPath))
         {
-            FileName = uri.ToString(),
-            UseShellExecute = true,
-        });
-    }
-    catch
-    {
-        Console.WriteLine($"Open this URL in your browser: {uri}");
-    }
-}
-
-static void PrintStartupBanner(Uri baseUri, Uri studioUri, bool noBrowser)
-{
-    var lines = new[]
-    {
-        "EFStudio is ready",
-        $"Host: {baseUri}",
-        $"UI:   {studioUri}",
-        noBrowser ? "Browser: disabled (--no-browser)" : "Browser: opening automatically",
-    };
-
-    var contentWidth = lines.Max(static line => line.Length);
-    var border = $"+-{new string('-', contentWidth)}-+";
-
-    WriteBannerLine(border, ConsoleColor.DarkCyan);
-
-    for (var index = 0; index < lines.Length; index++)
-    {
-        var line = lines[index];
-        if (index == 0)
-        {
-            WriteBannerContent(line, contentWidth, ConsoleColor.Green);
-            continue;
+            return defaultPath;
         }
 
-        var labelWidth = line.IndexOf(':');
-        if (labelWidth <= 0)
-        {
-            WriteBannerContent(line, contentWidth, ConsoleColor.Gray);
-            continue;
-        }
+        return ResolveProjectPath(workingDirectory, workingDirectory, description, defaultPath: null);
+    }
 
-        WriteBannerKeyValueContent(
-            line[..labelWidth],
-            line[(labelWidth + 1)..].TrimStart(),
-            contentWidth,
-            ConsoleColor.Cyan,
-            ConsoleColor.White
+    var candidate = Path.IsPathRooted(value) ? value : Path.GetFullPath(Path.Combine(workingDirectory, value));
+
+    if (Directory.Exists(candidate))
+    {
+        var projects = Directory.GetFiles(candidate, "*.csproj", SearchOption.TopDirectoryOnly);
+
+        return projects.Length switch
+        {
+            1 => projects[0],
+            0 => throw new InvalidOperationException(
+                $"EFStudio could not find a .csproj file in '{candidate}' for the {description}."
+            ),
+            _ => throw new InvalidOperationException(
+                $"EFStudio found multiple .csproj files in '{candidate}' for the {description}. Pass the specific project path with --project or --startup-project."
+            ),
+        };
+    }
+
+    if (File.Exists(candidate) && string.Equals(Path.GetExtension(candidate), ".csproj", StringComparison.OrdinalIgnoreCase))
+    {
+        return candidate;
+    }
+
+    throw new InvalidOperationException(
+        $"EFStudio could not find the {description} at '{candidate}'."
+    );
+}
+
+static async Task<string> GetSelectedTargetFrameworkAsync(string projectPath)
+{
+    var output = await RunDotNetAsync(
+        new[]
+        {
+            "msbuild",
+            projectPath,
+            "-getProperty:TargetFramework",
+            "-getProperty:TargetFrameworks",
+        }
+    );
+
+    using var document = JsonDocument.Parse(output);
+    var properties = document.RootElement.GetProperty("Properties");
+
+    var framework = GetProperty(properties, "TargetFramework");
+    if (!string.IsNullOrWhiteSpace(framework))
+    {
+        return framework;
+    }
+
+    var frameworks = GetProperty(properties, "TargetFrameworks");
+    if (!string.IsNullOrWhiteSpace(frameworks))
+    {
+        return frameworks
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .First();
+    }
+
+    throw new InvalidOperationException(
+        $"EFStudio could not determine the target framework for '{projectPath}'."
+    );
+}
+
+static string? GetProperty(JsonElement properties, string name)
+{
+    return properties.TryGetProperty(name, out var property) && property.ValueKind != JsonValueKind.Null
+        ? property.GetString()
+        : null;
+}
+
+static string GetSupportedWorkerFramework(string targetFramework)
+{
+    var match = Regex.Match(targetFramework, "^net(?<major>\\d+)\\.(?<minor>\\d+)$");
+    if (!match.Success || !int.TryParse(match.Groups["major"].Value, out var majorVersion))
+    {
+        throw new InvalidOperationException(
+            $"EFStudio supports .NET projects targeting net6.0 through net10.0. Found '{targetFramework}'."
         );
     }
 
-    WriteBannerLine(border, ConsoleColor.DarkCyan);
+    var workerFramework = $"net{majorVersion}.0";
+    return workerFramework switch
+    {
+        "net6.0" or "net7.0" or "net8.0" or "net9.0" or "net10.0" => workerFramework,
+        _ => throw new InvalidOperationException(
+            $"EFStudio supports .NET projects targeting net6.0 through net10.0. Found '{targetFramework}'."
+        ),
+    };
 }
 
-static void WriteBannerLine(string text, ConsoleColor color)
+static string GetWorkerDllPath(string workerFramework)
 {
-    var previousColor = Console.ForegroundColor;
-    Console.ForegroundColor = color;
-    Console.WriteLine(text);
-    Console.ForegroundColor = previousColor;
+    var workerDllPath = Path.Combine(
+        AppContext.BaseDirectory,
+        "workers",
+        workerFramework,
+        "EFStudio.Worker.dll"
+    );
+
+    return File.Exists(workerDllPath)
+        ? workerDllPath
+        : throw new InvalidOperationException(
+            $"EFStudio could not find the worker runtime for '{workerFramework}' at '{workerDllPath}'."
+        );
 }
 
-static void WriteBannerContent(string text, int contentWidth, ConsoleColor color)
+static async Task<string> RunDotNetAsync(IReadOnlyList<string> arguments)
 {
-    var previousColor = Console.ForegroundColor;
-    Console.ForegroundColor = ConsoleColor.DarkCyan;
-    Console.Write("| ");
-    Console.ForegroundColor = color;
-    Console.Write(text.PadRight(contentWidth));
-    Console.ForegroundColor = ConsoleColor.DarkCyan;
-    Console.WriteLine(" |");
-    Console.ForegroundColor = previousColor;
-}
+    var process = new Process
+    {
+        StartInfo = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        },
+    };
 
-static void WriteBannerKeyValueContent(
-    string label,
-    string value,
-    int contentWidth,
-    ConsoleColor labelColor,
-    ConsoleColor valueColor)
-{
-    var previousColor = Console.ForegroundColor;
-    var content = $"{label}: {value}";
-    var padding = new string(' ', contentWidth - content.Length);
+    foreach (var argument in arguments)
+    {
+        process.StartInfo.ArgumentList.Add(argument);
+    }
 
-    Console.ForegroundColor = ConsoleColor.DarkCyan;
-    Console.Write("| ");
-    Console.ForegroundColor = labelColor;
-    Console.Write(label);
-    Console.ForegroundColor = ConsoleColor.Gray;
-    Console.Write(": ");
-    Console.ForegroundColor = valueColor;
-    Console.Write(value);
-    Console.Write(padding);
-    Console.ForegroundColor = ConsoleColor.DarkCyan;
-    Console.WriteLine(" |");
-    Console.ForegroundColor = previousColor;
+    process.Start();
+
+    var standardOutputTask = process.StandardOutput.ReadToEndAsync();
+    var standardErrorTask = process.StandardError.ReadToEndAsync();
+    await process.WaitForExitAsync();
+
+    var standardOutput = await standardOutputTask;
+    var standardError = await standardErrorTask;
+
+    if (process.ExitCode != 0)
+    {
+        throw new InvalidOperationException(
+            $"EFStudio failed to run 'dotnet {string.Join(" ", arguments)}': {standardError.Trim()}"
+        );
+    }
+
+    return string.IsNullOrWhiteSpace(standardOutput) ? standardError : standardOutput;
 }
 
 static string GetErrorMessage(Exception exception)
 {
-    var effectiveException = exception is TargetInvocationException && exception.InnerException != null
-        ? exception.InnerException
-        : exception.GetBaseException();
-
-    return effectiveException.Message;
+    return exception.GetBaseException().Message;
 }
 
 internal sealed record ToolOptions(
     string? ProjectPath,
     string? StartupProjectPath,
-    string? ContextName,
-    int? Port,
-    bool NoBrowser,
     bool ShowHelp
 )
 {
@@ -231,9 +223,6 @@ internal sealed record ToolOptions(
     {
         string? projectPath = null;
         string? startupProjectPath = null;
-        string? contextName = null;
-        int? port = null;
-        var noBrowser = false;
         var showHelp = false;
 
         for (var index = 0; index < args.Length; index++)
@@ -247,33 +236,14 @@ internal sealed record ToolOptions(
                 case "--startup-project":
                     startupProjectPath = ReadValue(args, ref index, argument);
                     break;
-                case "--context":
-                    contextName = ReadValue(args, ref index, argument);
-                    break;
-                case "--port":
-                {
-                    var value = ReadValue(args, ref index, argument);
-                    if (!int.TryParse(value, out var parsedPort))
-                    {
-                        throw new InvalidOperationException($"EFStudio expected an integer after '{argument}'.");
-                    }
-
-                    port = parsedPort;
-                    break;
-                }
-                case "--no-browser":
-                    noBrowser = true;
-                    break;
                 case "--help":
                 case "-h":
                     showHelp = true;
                     break;
-                default:
-                    throw new InvalidOperationException($"EFStudio does not recognize the option '{argument}'.");
             }
         }
 
-        return new ToolOptions(projectPath, startupProjectPath, contextName, port, noBrowser, showHelp);
+        return new ToolOptions(projectPath, startupProjectPath, showHelp);
     }
 
     public static void WriteHelp(TextWriter writer)

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Text;
 using System.Text.Json;
 using EFStudio.Core.Contracts;
 using Microsoft.AspNetCore.Hosting;
@@ -31,46 +32,61 @@ public sealed class DbContextCatalogLoader
             ? targetProject
             : await BuildProjectAsync(startupProjectPath, cancellationToken);
 
-        var loadContext = AssemblyLoadContext.Default;
-        var dependencyResolver = DefaultContextDependencyResolver.Register(
-            new[] { startupProject.TargetPath, targetProject.TargetPath }
-        );
-        var startupAssembly = LoadAssemblyIntoDefaultContext(startupProject.TargetPath);
-        var targetAssembly = string.Equals(startupProject.TargetPath, targetProject.TargetPath, StringComparison.OrdinalIgnoreCase)
-            ? startupAssembly
-            : LoadAssemblyIntoDefaultContext(targetProject.TargetPath);
+        var assemblyPaths = new[] { startupProject.TargetPath, targetProject.TargetPath };
 
-        var startupHost = TryCreateStartupHost(startupAssembly, out var startupServices, out var startupError);
-        var factoryTypes = GetLoadableTypes(startupAssembly)
-            .Concat(GetLoadableTypes(targetAssembly))
-            .Where(type => type is { IsAbstract: false, IsInterface: false })
-            .Distinct()
-            .ToList();
-
-        var contextTypes = GetLoadableTypes(targetAssembly)
-            .Where(type => type is { IsAbstract: false } && IsDbContextType(type))
-            .OrderBy(type => type.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        if (contextTypes.Count == 0)
+        try
         {
-            throw new InvalidOperationException(
-                $"EFStudio could not find any DbContext types in '{targetProjectPath}'."
+            var loadContext = AssemblyLoadContext.Default;
+            var dependencyResolver = DefaultContextDependencyResolver.Register(assemblyPaths);
+            var startupAssembly = LoadAssemblyIntoDefaultContext(startupProject.TargetPath);
+            var targetAssembly = string.Equals(startupProject.TargetPath, targetProject.TargetPath, StringComparison.OrdinalIgnoreCase)
+                ? startupAssembly
+                : LoadAssemblyIntoDefaultContext(targetProject.TargetPath);
+
+            var startupHost = TryCreateStartupHost(
+                startupAssembly,
+                assemblyPaths,
+                out var startupServices,
+                out var startupError
             );
+            var factoryTypes = GetLoadableTypes(startupAssembly)
+                .Concat(GetLoadableTypes(targetAssembly))
+                .Where(type => type is { IsAbstract: false, IsInterface: false })
+                .Distinct()
+                .ToList();
+
+            var contextTypes = GetLoadableTypes(targetAssembly)
+                .Where(type => type is { IsAbstract: false } && IsDbContextType(type))
+                .OrderBy(type => type.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (contextTypes.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"EFStudio could not find any DbContext types in '{targetProjectPath}'."
+                );
+            }
+
+            var registrations = contextTypes
+                .Select(contextType =>
+                    CreateRegistration(contextType, factoryTypes, startupServices, startupError, assemblyPaths)
+                )
+                .ToList();
+
+            return new DiscoveredDbContextCatalog(loadContext, startupHost, dependencyResolver, registrations);
         }
-
-        var registrations = contextTypes
-            .Select(contextType => CreateRegistration(contextType, factoryTypes, startupServices, startupError))
-            .ToList();
-
-        return new DiscoveredDbContextCatalog(loadContext, startupHost, dependencyResolver, registrations);
+        catch (Exception exception)
+        {
+            throw CreateHelpfulException(exception, assemblyPaths);
+        }
     }
 
     private static DbContextRegistration CreateRegistration(
         Type contextType,
         IReadOnlyList<Type> factoryTypes,
         IServiceProvider? startupServices,
-        string? startupError
+        string? startupError,
+        IReadOnlyList<string> assemblyPaths
     )
     {
         var contextName = contextType.Name;
@@ -86,22 +102,29 @@ public sealed class DbContextCatalogLoader
                 CreatedByDesignTimeFactory: true,
                 Activator: () =>
                 {
-                    var factory = Activator.CreateInstance(factoryType)
-                        ?? throw new InvalidOperationException(
-                            $"EFStudio could not create the design-time factory '{factoryType.FullName}'."
-                        );
+                    try
+                    {
+                        var factory = Activator.CreateInstance(factoryType)
+                            ?? throw new InvalidOperationException(
+                                $"EFStudio could not create the design-time factory '{factoryType.FullName}'."
+                            );
 
-                    var createMethod = factoryType.GetMethod("CreateDbContext", new[] { typeof(string[]) })
-                        ?? throw new InvalidOperationException(
-                            $"EFStudio could not find CreateDbContext on '{factoryType.FullName}'."
-                        );
+                        var createMethod = factoryType.GetMethod("CreateDbContext", new[] { typeof(string[]) })
+                            ?? throw new InvalidOperationException(
+                                $"EFStudio could not find CreateDbContext on '{factoryType.FullName}'."
+                            );
 
-                    var context = createMethod.Invoke(factory, new object[] { Array.Empty<string>() })
-                        ?? throw new InvalidOperationException(
-                            $"EFStudio could not create '{contextName}' through '{factoryType.FullName}'."
-                        );
+                        var context = createMethod.Invoke(factory, new object[] { Array.Empty<string>() })
+                            ?? throw new InvalidOperationException(
+                                $"EFStudio could not create '{contextName}' through '{factoryType.FullName}'."
+                            );
 
-                    return new DbContextLease((DbContext)context);
+                        return new DbContextLease((DbContext)context);
+                    }
+                    catch (Exception exception)
+                    {
+                        throw CreateHelpfulException(exception, assemblyPaths);
+                    }
                 },
                 ActivationError: null
             );
@@ -126,19 +149,26 @@ public sealed class DbContextCatalogLoader
             CreatedByDesignTimeFactory: false,
             Activator: () =>
             {
-                var scopeFactory = startupServices.GetRequiredService<IServiceScopeFactory>();
-                var scope = scopeFactory.CreateScope();
-                var context = scope.ServiceProvider.GetService(contextType) as DbContext;
-
-                if (context == null)
+                try
                 {
-                    scope.Dispose();
-                    throw new InvalidOperationException(
-                        $"EFStudio could not resolve '{contextName}' from the startup project's service provider. Add an IDesignTimeDbContextFactory<{contextName}> or register the DbContext in the startup project."
-                    );
-                }
+                    var scopeFactory = startupServices.GetRequiredService<IServiceScopeFactory>();
+                    var scope = scopeFactory.CreateScope();
+                    var context = scope.ServiceProvider.GetService(contextType) as DbContext;
 
-                return new DbContextLease(context, scope);
+                    if (context == null)
+                    {
+                        scope.Dispose();
+                        throw new InvalidOperationException(
+                            $"EFStudio could not resolve '{contextName}' from the startup project's service provider. Add an IDesignTimeDbContextFactory<{contextName}> or register the DbContext in the startup project."
+                        );
+                    }
+
+                    return new DbContextLease(context, scope);
+                }
+                catch (Exception exception)
+                {
+                    throw CreateHelpfulException(exception, assemblyPaths);
+                }
             },
             ActivationError: null
         );
@@ -146,6 +176,7 @@ public sealed class DbContextCatalogLoader
 
     private static object? TryCreateStartupHost(
         Assembly startupAssembly,
+        IReadOnlyList<string> assemblyPaths,
         out IServiceProvider? services,
         out string? error
     )
@@ -193,7 +224,7 @@ public sealed class DbContextCatalogLoader
             catch (Exception exception)
             {
                 error =
-                    $"EFStudio could not build the startup project's service provider from '{method.DeclaringType?.FullName}.{method.Name}': {exception.GetBaseException().Message}";
+                    $"EFStudio could not build the startup project's service provider from '{method.DeclaringType?.FullName}.{method.Name}': {GetHelpfulExceptionMessage(exception, assemblyPaths)}";
             }
         }
 
@@ -491,6 +522,100 @@ public sealed class DbContextCatalogLoader
         string ProjectDirectory,
         string AssemblyName
     );
+
+    private static Exception CreateHelpfulException(
+        Exception exception,
+        IReadOnlyList<string> assemblyPaths
+    )
+    {
+        var message = GetHelpfulExceptionMessage(exception, assemblyPaths);
+        return message == GetEffectiveException(exception).Message
+            ? exception
+            : new InvalidOperationException(message, exception);
+    }
+
+    private static string GetHelpfulExceptionMessage(
+        Exception exception,
+        IReadOnlyList<string> assemblyPaths
+    )
+    {
+        var effectiveException = GetEffectiveException(exception);
+        if (!IsEntityFrameworkVersionMismatch(effectiveException))
+        {
+            return effectiveException.Message;
+        }
+
+        var builder = new StringBuilder();
+        builder.Append(
+            "EFStudio detected incompatible Entity Framework Core assemblies while loading the selected project. "
+        );
+        builder.Append(
+            "Align all 'Microsoft.EntityFrameworkCore*' packages and your database provider package to the same EF Core major/minor version."
+        );
+
+        var resolvedAssemblies = GetEntityFrameworkAssemblyVersions(assemblyPaths);
+        if (resolvedAssemblies.Count > 0)
+        {
+            builder.Append(" Resolved runtime assemblies: ");
+            builder.Append(string.Join(", ", resolvedAssemblies));
+            builder.Append('.');
+        }
+
+        builder.Append(" Original error: ");
+        builder.Append(effectiveException.Message);
+        return builder.ToString();
+    }
+
+    private static Exception GetEffectiveException(Exception exception)
+    {
+        return exception is TargetInvocationException { InnerException: not null }
+            ? exception.InnerException
+            : exception.GetBaseException();
+    }
+
+    private static bool IsEntityFrameworkVersionMismatch(Exception exception)
+    {
+        if (exception is not (MissingMethodException or TypeLoadException or FileLoadException or FileNotFoundException))
+        {
+            return false;
+        }
+
+        var text = exception.ToString();
+        return text.Contains("Microsoft.EntityFrameworkCore", StringComparison.Ordinal)
+            || text.Contains("EntityFrameworkCore", StringComparison.Ordinal)
+            || text.Contains("AbstractionsStrings", StringComparison.Ordinal);
+    }
+
+    private static IReadOnlyList<string> GetEntityFrameworkAssemblyVersions(IReadOnlyList<string> assemblyPaths)
+    {
+        return assemblyPaths
+            .Select(Path.GetDirectoryName)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Cast<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .SelectMany(path =>
+                Directory.Exists(path)
+                    ? Directory
+                        .GetFiles(path, "Microsoft.EntityFrameworkCore*.dll", SearchOption.TopDirectoryOnly)
+                    : Array.Empty<string>()
+            )
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+            .Select(path => $"{Path.GetFileNameWithoutExtension(path)} {GetAssemblyVersion(path)}")
+            .ToList();
+    }
+
+    private static string GetAssemblyVersion(string assemblyPath)
+    {
+        try
+        {
+            return AssemblyName.GetAssemblyName(assemblyPath).Version?.ToString() ?? "unknown";
+        }
+        catch
+        {
+            return "unknown";
+        }
+    }
 
 }
 

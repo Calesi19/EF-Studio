@@ -12,8 +12,64 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\EFStudio.Core\EFStudio.Core.csproj" />
-    <ProjectReference Include="..\EFStudio.Server\EFStudio.Server.csproj" />
     <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <WorkerTargetFramework Include="net6.0" />
+    <WorkerTargetFramework Include="net7.0" />
+    <WorkerTargetFramework Include="net8.0" />
+    <WorkerTargetFramework Include="net9.0" />
+    <WorkerTargetFramework Include="net10.0" />
+  </ItemGroup>
+
+  <Target Name="BuildEFStudioWorkers" BeforeTargets="Build;Pack">
+    <MSBuild
+      Projects="..\EFStudio.Worker\EFStudio.Worker.csproj"
+      Targets="Restore"
+      Properties="Configuration=$(Configuration)" />
+    <MSBuild
+      Projects="..\EFStudio.Worker\EFStudio.Worker.csproj"
+      Targets="Build"
+      Properties="Configuration=$(Configuration);TargetFramework=%(WorkerTargetFramework.Identity)" />
+  </Target>
+
+  <Target Name="CopyEFStudioWorkers" AfterTargets="Build">
+    <ItemGroup>
+      <WorkerOutputNet6 Include="..\EFStudio.Worker\bin\$(Configuration)\net6.0\**\*" />
+      <WorkerOutputNet7 Include="..\EFStudio.Worker\bin\$(Configuration)\net7.0\**\*" />
+      <WorkerOutputNet8 Include="..\EFStudio.Worker\bin\$(Configuration)\net8.0\**\*" />
+      <WorkerOutputNet9 Include="..\EFStudio.Worker\bin\$(Configuration)\net9.0\**\*" />
+      <WorkerOutputNet10 Include="..\EFStudio.Worker\bin\$(Configuration)\net10.0\**\*" />
+    </ItemGroup>
+
+    <Copy
+      SourceFiles="@(WorkerOutputNet6)"
+      DestinationFiles="@(WorkerOutputNet6->'$(OutDir)workers/net6.0/%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="@(WorkerOutputNet7)"
+      DestinationFiles="@(WorkerOutputNet7->'$(OutDir)workers/net7.0/%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="@(WorkerOutputNet8)"
+      DestinationFiles="@(WorkerOutputNet8->'$(OutDir)workers/net8.0/%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="@(WorkerOutputNet9)"
+      DestinationFiles="@(WorkerOutputNet9->'$(OutDir)workers/net9.0/%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="@(WorkerOutputNet10)"
+      DestinationFiles="@(WorkerOutputNet10->'$(OutDir)workers/net10.0/%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+  </Target>
+
+  <ItemGroup>
+    <None Include="..\EFStudio.Worker\bin\$(Configuration)\net6.0\**\*" Pack="true" PackagePath="tools/$(TargetFramework)/any/workers/net6.0/%(RecursiveDir)%(Filename)%(Extension)" Visible="false" />
+    <None Include="..\EFStudio.Worker\bin\$(Configuration)\net7.0\**\*" Pack="true" PackagePath="tools/$(TargetFramework)/any/workers/net7.0/%(RecursiveDir)%(Filename)%(Extension)" Visible="false" />
+    <None Include="..\EFStudio.Worker\bin\$(Configuration)\net8.0\**\*" Pack="true" PackagePath="tools/$(TargetFramework)/any/workers/net8.0/%(RecursiveDir)%(Filename)%(Extension)" Visible="false" />
+    <None Include="..\EFStudio.Worker\bin\$(Configuration)\net9.0\**\*" Pack="true" PackagePath="tools/$(TargetFramework)/any/workers/net9.0/%(RecursiveDir)%(Filename)%(Extension)" Visible="false" />
+    <None Include="..\EFStudio.Worker\bin\$(Configuration)\net10.0\**\*" Pack="true" PackagePath="tools/$(TargetFramework)/any/workers/net10.0/%(RecursiveDir)%(Filename)%(Extension)" Visible="false" />
   </ItemGroup>
 </Project>
