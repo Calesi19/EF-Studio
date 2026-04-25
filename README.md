@@ -1,7 +1,19 @@
-# EFStudio
+<p align="center">
+  <img src="./docs/logo.webp" alt="EFStudio logo" width="180" />
+</p>
 
-[![Publish NuGet Package](https://github.com/Calesi19/EFStudio/actions/workflows/publish-nuget.yml/badge.svg)](https://github.com/Calesi19/EFStudio/actions/workflows/publish-nuget.yml)
-[![Build and Test](https://github.com/Calesi19/EFStudio/actions/workflows/pipeline.yml/badge.svg)](https://github.com/Calesi19/EFStudio/actions/workflows/pipeline.yml)
+<p align="center">
+  Prisma Studio-style database browsing for EF Core apps.
+</p>
+
+<p align="center">
+  <a href="https://github.com/Calesi19/EFStudio/actions/workflows/publish-nuget.yml">
+    <img src="https://github.com/Calesi19/EFStudio/actions/workflows/publish-nuget.yml/badge.svg" alt="Publish NuGet Package" />
+  </a>
+  <a href="https://github.com/Calesi19/EFStudio/actions/workflows/pipeline.yml">
+    <img src="https://github.com/Calesi19/EFStudio/actions/workflows/pipeline.yml/badge.svg" alt="Build and Test" />
+  </a>
+</p>
 
 **EFStudio** is a minimal, plug-and-play visual database browser for EF Core apps. Heavily inspired by Prisma Studio, it lets you inspect schema and records directly from your browser with a single line of configuration in your ASP.NET Core application.
 
