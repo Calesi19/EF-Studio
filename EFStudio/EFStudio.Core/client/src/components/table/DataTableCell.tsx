@@ -112,7 +112,7 @@ function EditInput({
   }
 
   const baseClass =
-    "h-full w-full bg-background border border-primary/60 rounded-sm px-1.5 text-xs focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30";
+    "h-full w-full bg-primary/5 rounded-none border-0 outline-none px-3 text-xs font-inherit";
 
   if (column.type === "boolean") {
     return (
@@ -139,7 +139,7 @@ function EditInput({
         onBlur={commit}
         onKeyDown={handleKeyDown}
         rows={3}
-        className={`${baseClass} font-mono resize-none min-h-[2rem]`}
+        className={`${baseClass} resize-none min-h-[2rem]`}
       />
     );
   }
@@ -154,7 +154,7 @@ function EditInput({
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commit}
       onKeyDown={handleKeyDown}
-      className={`${baseClass} font-mono`}
+      className={baseClass}
     />
   );
 }
