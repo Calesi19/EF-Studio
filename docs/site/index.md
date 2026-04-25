@@ -20,9 +20,10 @@ It is designed for development only. The middleware is intentionally guarded so 
 
 ## Install
 
-```bash
-dotnet add package EFStudio
-```
+<div class="code-copy-block">
+  <pre><code>dotnet add package EFStudio</code></pre>
+  <button class="copy-btn" aria-label="Copy to clipboard">Copy</button>
+</div>
 
 ## Wire it up
 

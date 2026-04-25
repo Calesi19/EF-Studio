@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>
+      Usage | EFStudio
+    </title>
+    <meta name="description" content="Usage examples for EFStudio." />
+    <link rel="icon" href="/EFStudio/assets/images/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/EFStudio/assets/css/site.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="/EFStudio/">
+          <img
+            class="brand-logo"
+            src="/EFStudio/assets/images/logo.webp"
+            alt="EFStudio logo"
+            width="28"
+            height="28"
+          />
+          <span class="brand-name">EFStudio</span>
+        </a>
+        <nav class="site-nav" aria-label="Primary">
+          <a href="https://github.com/Calesi19/EFStudio" class="nav-link">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="site-main"><section class="page-intro panel">
+  <span class="eyebrow">Usage</span>
+  <h1>Keep database inspection inside the application workflow.</h1>
+  <p>
+    After setup, EFStudio becomes part of the same local loop as your API. Start
+    the app, open the studio route, and inspect the data model without switching
+    to an external client.
+  </p>
+</section>
+
+<section class="section panel">
+  <h2>Full example</h2>
+
+  <div class="language-csharp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">using</span> <span class="nn">EFStudio.Core.Extensions</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">Microsoft.EntityFrameworkCore</span><span class="p">;</span>
+
+<span class="kt">var</span> <span class="n">builder</span> <span class="p">=</span> <span class="n">WebApplication</span><span class="p">.</span><span class="nf">CreateBuilder</span><span class="p">(</span><span class="n">args</span><span class="p">);</span>
+
+<span class="n">builder</span><span class="p">.</span><span class="n">Services</span><span class="p">.</span><span class="n">AddDbContext</span><span class="p">&lt;</span><span class="n">AppDbContext</span><span class="p">&gt;(</span><span class="n">options</span> <span class="p">=&gt;</span>
+    <span class="n">options</span><span class="p">.</span><span class="nf">UseNpgsql</span><span class="p">(</span><span class="n">builder</span><span class="p">.</span><span class="n">Configuration</span><span class="p">.</span><span class="nf">GetConnectionString</span><span class="p">(</span><span class="s">"DefaultConnection"</span><span class="p">))</span>
+<span class="p">);</span>
+
+<span class="n">builder</span><span class="p">.</span><span class="n">Services</span><span class="p">.</span><span class="n">AddEFStudio</span><span class="p">&lt;</span><span class="n">AppDbContext</span><span class="p">&gt;();</span>
+
+<span class="kt">var</span> <span class="n">app</span> <span class="p">=</span> <span class="n">builder</span><span class="p">.</span><span class="nf">Build</span><span class="p">();</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="n">app</span><span class="p">.</span><span class="n">Environment</span><span class="p">.</span><span class="nf">IsDevelopment</span><span class="p">())</span>
+<span class="p">{</span>
+    <span class="n">app</span><span class="p">.</span><span class="nf">UseEFStudio</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="n">app</span><span class="p">.</span><span class="nf">Run</span><span class="p">();</span>
+</code></pre></div>  </div>
+</section>
+
+<section class="section info-grid">
+  <article class="info-card">
+    <h3>Open the studio</h3>
+    <p>
+      Browse to <code>/efstudio</code> after starting the app. Example:
+      <code>http://localhost:5000/efstudio</code>.
+    </p>
+  </article>
+  <article class="info-card">
+    <h3>Inspect schema</h3>
+    <p>
+      Use the UI to move through discovered tables and understand how your
+      entities are mapped.
+    </p>
+  </article>
+  <article class="info-card">
+    <h3>Review records</h3>
+    <p>
+      Browse and filter the current data without setting up an external admin
+      client.
+    </p>
+  </article>
+  <article class="info-card">
+    <h3>Stay in development mode</h3>
+    <p>
+      The intended use case is local and internal development, not production
+      exposure.
+    </p>
+  </article>
+</section>
+
+<section class="section panel">
+  <h2>Typical workflow</h2>
+  <ol>
+    <li>Start the ASP.NET Core app with your normal local configuration.</li>
+    <li>Open <code>/efstudio</code> in the browser.</li>
+    <li>Inspect schema and records while developing or debugging.</li>
+    <li>Close the tool when you are done. No separate admin stack is required.</li>
+  </ol>
+</section>
+</main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <p>EFStudio — development-only by design.</p>
+      </div>
+    </footer>
+    <script>
+      document.querySelectorAll(".copy-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var code = btn.closest(".code-copy-block").querySelector("code").innerText;
+          navigator.clipboard.writeText(code).then(function () {
+            btn.textContent = "Copied!";
+            btn.classList.add("copied");
+            setTimeout(function () {
+              btn.textContent = "Copy";
+              btn.classList.remove("copied");
+            }, 2000);
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

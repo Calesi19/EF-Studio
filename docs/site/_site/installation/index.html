@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>
+      Installation | EFStudio
+    </title>
+    <meta name="description" content="Install and configure EFStudio in an ASP.NET Core app." />
+    <link rel="icon" href="/EFStudio/assets/images/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/EFStudio/assets/css/site.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="/EFStudio/">
+          <img
+            class="brand-logo"
+            src="/EFStudio/assets/images/logo.webp"
+            alt="EFStudio logo"
+            width="28"
+            height="28"
+          />
+          <span class="brand-name">EFStudio</span>
+        </a>
+        <nav class="site-nav" aria-label="Primary">
+          <a href="https://github.com/Calesi19/EFStudio" class="nav-link">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="site-main"><section class="page-intro panel">
+  <span class="eyebrow">Installation</span>
+  <h1>Install the package and register the middleware.</h1>
+  <p>
+    EFStudio is designed to fit into an existing ASP.NET Core application with
+    minimal setup. It reuses the app’s EF Core configuration rather than asking
+    you to define a second database connection.
+  </p>
+</section>
+
+<section class="section panel">
+  <h2>1. Add the package</h2>
+
+  <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dotnet add package EFStudio
+</code></pre></div>  </div>
+
+  <p>
+    The package name is <code>EFStudio</code>. The current extension method
+    namespace in the repo is <code>EFStudio.Core.Extensions</code>.
+  </p>
+</section>
+
+<section class="section panel">
+  <h2>2. Register EFStudio with your <code>DbContext</code></h2>
+
+  <div class="language-csharp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">builder</span><span class="p">.</span><span class="n">Services</span><span class="p">.</span><span class="n">AddDbContext</span><span class="p">&lt;</span><span class="n">AppDbContext</span><span class="p">&gt;(</span><span class="n">options</span> <span class="p">=&gt;</span>
+    <span class="n">options</span><span class="p">.</span><span class="nf">UseNpgsql</span><span class="p">(</span><span class="n">builder</span><span class="p">.</span><span class="n">Configuration</span><span class="p">.</span><span class="nf">GetConnectionString</span><span class="p">(</span><span class="s">"DefaultConnection"</span><span class="p">))</span>
+<span class="p">);</span>
+
+<span class="n">builder</span><span class="p">.</span><span class="n">Services</span><span class="p">.</span><span class="n">AddEFStudio</span><span class="p">&lt;</span><span class="n">AppDbContext</span><span class="p">&gt;();</span>
+</code></pre></div>  </div>
+
+  <div class="callout">
+    EFStudio expects your application to already be configured with a working EF
+    Core provider.
+  </div>
+</section>
+
+<section class="section panel">
+  <h2>3. Expose the studio in development</h2>
+
+  <div class="language-csharp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">if</span> <span class="p">(</span><span class="n">app</span><span class="p">.</span><span class="n">Environment</span><span class="p">.</span><span class="nf">IsDevelopment</span><span class="p">())</span>
+<span class="p">{</span>
+    <span class="n">app</span><span class="p">.</span><span class="nf">UseEFStudio</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div>  </div>
+
+  <p>
+    The middleware is intentionally intended for development environments only.
+    Keep that guard in place.
+  </p>
+</section>
+
+<section class="section panel">
+  <h2>Requirements</h2>
+  <ul>
+    <li>.NET 6.0 or higher</li>
+    <li>Entity Framework Core 6.0+</li>
+    <li>An EF Core provider for your database</li>
+    <li><code>Npgsql.EntityFrameworkCore.PostgreSQL</code> for PostgreSQL</li>
+    <li><code>Microsoft.EntityFrameworkCore.Sqlite</code> for SQLite</li>
+  </ul>
+</section>
+</main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <p>EFStudio — development-only by design.</p>
+      </div>
+    </footer>
+    <script>
+      document.querySelectorAll(".copy-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var code = btn.closest(".code-copy-block").querySelector("code").innerText;
+          navigator.clipboard.writeText(code).then(function () {
+            btn.textContent = "Copied!";
+            btn.classList.add("copied");
+            setTimeout(function () {
+              btn.textContent = "Copy";
+              btn.classList.remove("copied");
+            }, 2000);
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -27,7 +27,7 @@
           <span class="brand-name">EFStudio</span>
         </a>
         <nav class="site-nav" aria-label="Primary">
-          <a href="https://github.com/carloslespin/EF-Studio" class="nav-link">GitHub</a>
+          <a href="https://github.com/Calesi19/EFStudio" class="nav-link">GitHub</a>
         </nav>
       </div>
     </header>
@@ -39,5 +39,20 @@
         <p>EFStudio — development-only by design.</p>
       </div>
     </footer>
+    <script>
+      document.querySelectorAll(".copy-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var code = btn.closest(".code-copy-block").querySelector("code").innerText;
+          navigator.clipboard.writeText(code).then(function () {
+            btn.textContent = "Copied!";
+            btn.classList.add("copied");
+            setTimeout(function () {
+              btn.textContent = "Copy";
+              btn.classList.remove("copied");
+            }, 2000);
+          });
+        });
+      });
+    </script>
   </body>
 </html>
