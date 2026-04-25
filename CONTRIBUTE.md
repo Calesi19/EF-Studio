@@ -99,6 +99,35 @@ npm run lint
 4. Run the relevant build, lint, and test commands before opening a PR.
 5. Update documentation when the user-facing behavior or setup changes.
 
+## Running Tests
+
+From `EFStudio/`, run the full .NET test suite with:
+
+```bash
+dotnet test EFStudio.Tests/EFStudio.Tests.csproj
+```
+
+If you only want to verify the test project compiles, use:
+
+```bash
+dotnet test EFStudio.Tests/EFStudio.Tests.csproj --no-restore -m:1 -nr:false
+```
+
+Useful targeted runs:
+
+```bash
+dotnet test EFStudio.Tests/EFStudio.Tests.csproj --filter FullyQualifiedName~ToolServerTests
+dotnet test EFStudio.Tests/EFStudio.Tests.csproj --filter FullyQualifiedName~DataServiceTests
+dotnet test EFStudio.Tests/EFStudio.Tests.csproj --filter FullyQualifiedName~PostgresIntegrationTests
+```
+
+Notes:
+
+- Most tests run against in-memory SQLite or test-only contexts and do not need any manual setup.
+- `PostgresIntegrationTests` use `Testcontainers.PostgreSql`, so Docker must be installed and running.
+- The test project also includes model-configuration coverage for the sample `AppDbContext`.
+- If you changed the global tool or server startup flow, run the full test suite before opening a PR.
+
 ## Pull Requests
 
 - Describe the problem being solved and the approach you took.
