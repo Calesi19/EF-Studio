@@ -27,11 +27,11 @@ jobs:
 
       # 1. Build the React Frontend
       - name: Install Frontend Dependencies
-        working-directory: ./EFStudio/EFStudio.Core/client
+        working-directory: ./EFStudio/EFStudio.App
         run: npm ci
 
       - name: Build Frontend
-        working-directory: ./EFStudio/EFStudio.Core/client
+        working-directory: ./EFStudio/EFStudio.App
         run: npm run build
 
       # 2. Restore and Build .NET

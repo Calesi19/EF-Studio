@@ -15,13 +15,13 @@ export default defineConfig({
     open: "/efstudio/",
     proxy: {
       "/efstudio/api": {
-        target: "http://localhost:5000",
+        target: "http://localhost:5123",
         changeOrigin: true,
       },
     },
   },
   build: {
-    outDir: "../wwwroot",
+    outDir: "../EFStudio.Core/wwwroot",
     emptyOutDir: true,
   },
 });

@@ -11,7 +11,7 @@ Thanks for contributing to EFStudio.
 ## Project Layout
 
 - `EFStudio/EFStudio.Core/` contains the .NET library and middleware code.
-- `EFStudio/EFStudio.Core/client/` contains the React frontend served by the library.
+- `EFStudio/EFStudio.App/` contains the React frontend served by the library.
 - `EFStudio/EFStudio.Sample/` is the sample ASP.NET Core app for manual testing.
 - `docs/site/` contains the documentation site source.
 
@@ -77,7 +77,7 @@ The sample project includes `IDesignTimeDbContextFactory<AppDbContext>` so the t
 
 ### Frontend
 
-From `EFStudio/EFStudio.Core/client/`:
+From `EFStudio/EFStudio.App/`:
 
 ```bash
 npm install

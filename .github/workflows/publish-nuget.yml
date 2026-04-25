@@ -30,11 +30,11 @@ jobs:
           echo "PACKAGE_VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Install frontend dependencies
-        working-directory: ./EFStudio/EFStudio.Core/client
+        working-directory: ./EFStudio/EFStudio.App
         run: npm ci
 
       - name: Build frontend
-        working-directory: ./EFStudio/EFStudio.Core/client
+        working-directory: ./EFStudio/EFStudio.App
         run: npm run build
 
       - name: Restore dependencies

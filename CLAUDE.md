@@ -10,17 +10,17 @@ The repo has these main parts:
 - **`EFStudio/EFStudio.Tool/`** — the .NET global tool entry point (`dotnet efstudio`)
 - **`EFStudio/EFStudio.Server/`** — the local web server that exposes the EFStudio API and serves the embedded frontend
 - **`EFStudio/EFStudio.Core/`** — shared contracts, schema/data services, DbContext discovery, and embedded assets
-- **`EFStudio/EFStudio.Core/client/`** — the React frontend embedded into the server
+- **`EFStudio/EFStudio.App/`** — the React frontend embedded into the server
 - **`EFStudio/EFStudio.Sample/`** — a sample ASP.NET Core app used for manual tool testing
 - **`EFStudio/EFStudio.Tests/`** — automated tests for discovery, schema, data, and server behavior
 
 ## Frontend Commands
 
-All commands run from `EFStudio/EFStudio.Core/client/`:
+All commands run from `EFStudio/EFStudio.App/`:
 
 ```bash
 npm run dev        # start dev server (Vite HMR)
-npm run build      # tsc -b && vite build (output to dist/)
+npm run build      # tsc -b && vite build (output to EFStudio.Core/wwwroot/)
 npm run lint       # eslint
 npm run preview    # preview production build
 ```
