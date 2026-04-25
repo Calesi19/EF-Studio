@@ -12,17 +12,19 @@ import { Cancel01Icon } from "@hugeicons/core-free-icons";
 export function StudioContent() {
   const {
     activeTab,
-    activeTableDeleteError,
     activeTabId,
     activeTableError,
     activeTableLoading,
     closeAllTabs,
     closeTab,
+    contexts,
     effectiveSidebarOpen,
     error,
     loading,
     nameDisplay,
+    selectedContextName,
     selectedTable,
+    selectContext,
     selectTable,
     setActiveTabId,
     tableLoadErrors,
@@ -43,9 +45,12 @@ export function StudioContent() {
       sidebarOpen={effectiveSidebarOpen}
       sidebar={
         <Sidebar
+          contexts={contexts}
+          selectedContextName={selectedContextName}
           tables={tables}
           selectedTableKey={activeTab?.tableKey ?? null}
           onSelectTable={selectTable}
+          onSelectContext={selectContext}
         />
       }
     >
@@ -66,11 +71,6 @@ export function StudioContent() {
           {error ? (
             <div className="mx-3 mt-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
               {error}
-            </div>
-          ) : null}
-          {activeTableDeleteError ? (
-            <div className="mx-3 mt-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-              {activeTableDeleteError}
             </div>
           ) : null}
           {tableLoadErrors.length > 0 && !tableErrorsDismissed ? (
@@ -110,11 +110,19 @@ export function StudioContent() {
               )
             ) : (
               <StudioStatus
-                title={tables.length === 0 ? "No tables found" : "Select a table to browse data"}
+                title={
+                  !selectedContextName && contexts.length > 1
+                    ? "Select a DbContext"
+                    : tables.length === 0
+                      ? "No tables found"
+                      : "Select a table to browse data"
+                }
                 message={
-                  tables.length === 0
-                    ? "The middleware returned an empty schema."
-                    : "Select a table to view and manage records."
+                  !selectedContextName && contexts.length > 1
+                    ? "Choose a DbContext from the sidebar to load its model."
+                    : tables.length === 0
+                      ? "The selected DbContext returned an empty schema."
+                      : "Select a table to view read-only records."
                 }
               />
             )}

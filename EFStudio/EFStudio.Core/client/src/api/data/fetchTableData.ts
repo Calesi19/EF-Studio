@@ -1,15 +1,42 @@
 import { keepPreviousData, queryOptions, useQuery } from "@tanstack/react-query";
 import { DEFAULT_QUERY_STALE_TIME_MS, EFSTUDIO_API_BASE } from "@/api/constants";
-import type { RecordRow } from "@/types";
+import type { PaginationState, RecordRow, SortState } from "@/types";
 
 interface ApiTableDataResponse {
   key: string;
   name: string;
   schema?: string | null;
+  page: number;
+  pageSize: number;
+  totalRows: number;
   rows: Record<string, unknown>[];
 }
 
-export const tableDataQueryKey = (tableKey: string) => ["table-data", tableKey] as const;
+export interface TablePageData {
+  rows: RecordRow[];
+  totalRows: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export const tableDataQueryKey = (
+  contextName: string,
+  tableKey: string,
+  pagination: PaginationState,
+  filter: string,
+  sort: SortState,
+) =>
+  [
+    "table-data",
+    contextName,
+    tableKey,
+    pagination.page,
+    pagination.pageSize,
+    filter,
+    sort.column,
+    sort.direction,
+  ] as const;
 
 function normalizeCellValue(value: unknown): RecordRow[string] {
   if (value === null || value === undefined) {
@@ -29,8 +56,31 @@ function normalizeRows(rows: Record<string, unknown>[]): RecordRow[] {
   );
 }
 
-export async function fetchTableData(tableKey: string, signal?: AbortSignal): Promise<RecordRow[]> {
-  const tableResponse = await fetch(`${EFSTUDIO_API_BASE}/data?table=${encodeURIComponent(tableKey)}`, {
+export async function fetchTableData(
+  contextName: string,
+  tableKey: string,
+  pagination: PaginationState,
+  filter: string,
+  sort: SortState,
+  signal?: AbortSignal,
+): Promise<TablePageData> {
+  const searchParams = new URLSearchParams({
+    context: contextName,
+    table: tableKey,
+    page: String(pagination.page),
+    pageSize: String(pagination.pageSize),
+  });
+
+  if (filter.trim()) {
+    searchParams.set("filter", filter);
+  }
+
+  if (sort.column) {
+    searchParams.set("sortColumn", sort.column);
+    searchParams.set("sortDirection", sort.direction);
+  }
+
+  const tableResponse = await fetch(`${EFSTUDIO_API_BASE}/data?${searchParams.toString()}`, {
     signal,
   });
 
@@ -40,22 +90,47 @@ export async function fetchTableData(tableKey: string, signal?: AbortSignal): Pr
 
   const tableData = (await tableResponse.json()) as ApiTableDataResponse;
 
-  return normalizeRows(tableData.rows);
+  return {
+    rows: normalizeRows(tableData.rows),
+    totalRows: tableData.totalRows,
+    page: tableData.page,
+    pageSize: tableData.pageSize,
+    totalPages: Math.max(1, Math.ceil(tableData.totalRows / Math.max(1, tableData.pageSize))),
+  };
 }
 
-export function tableDataQueryOptions(tableKey: string) {
+export function tableDataQueryOptions(
+  contextName: string | null,
+  tableKey: string,
+  pagination: PaginationState,
+  filter: string,
+  sort: SortState,
+) {
   return queryOptions({
-    queryKey: tableDataQueryKey(tableKey),
-    queryFn: ({ signal }) => fetchTableData(tableKey, signal),
+    queryKey: tableDataQueryKey(contextName ?? "", tableKey, pagination, filter, sort),
+    queryFn: ({ signal }) => {
+      if (!contextName) {
+        throw new Error("Select a DbContext before loading data.");
+      }
+
+      return fetchTableData(contextName, tableKey, pagination, filter, sort, signal);
+    },
     staleTime: DEFAULT_QUERY_STALE_TIME_MS,
     placeholderData: keepPreviousData,
-    enabled: !!tableKey,
+    enabled: !!tableKey && !!contextName,
   });
 }
 
-export function useTableData(tableKey: string, enabled = true) {
+export function useTableData(
+  contextName: string | null,
+  tableKey: string,
+  pagination: PaginationState,
+  filter: string,
+  sort: SortState,
+  enabled = true,
+) {
   return useQuery({
-    ...tableDataQueryOptions(tableKey),
-    enabled: enabled && !!tableKey,
+    ...tableDataQueryOptions(contextName, tableKey, pagination, filter, sort),
+    enabled: enabled && !!tableKey && !!contextName,
   });
 }

@@ -28,7 +28,7 @@ interface ApiTableInfo {
   columns: ApiColumnInfo[];
 }
 
-export const schemaQueryKey = ["schema"] as const;
+export const schemaQueryKey = (contextName: string | null) => ["schema", contextName] as const;
 
 function toDisplayName(name: string): string {
   return name.replace(/([a-z0-9])([A-Z])/g, "$1 $2");
@@ -78,8 +78,10 @@ function normalizeColumn(column: ApiColumnInfo): ColumnDef {
   };
 }
 
-export async function fetchSchema(signal?: AbortSignal): Promise<SchemaTable[]> {
-  const response = await fetch(`${EFSTUDIO_API_BASE}/schema`, { signal });
+export async function fetchSchema(contextName: string, signal?: AbortSignal): Promise<SchemaTable[]> {
+  const response = await fetch(`${EFSTUDIO_API_BASE}/schema?context=${encodeURIComponent(contextName)}`, {
+    signal,
+  });
 
   if (!response.ok) {
     throw new Error(`Failed to load schema (${response.status})`);
@@ -97,18 +99,25 @@ export async function fetchSchema(signal?: AbortSignal): Promise<SchemaTable[]> 
   }));
 }
 
-export function schemaQueryOptions() {
+export function schemaQueryOptions(contextName: string | null) {
   return queryOptions({
-    queryKey: schemaQueryKey,
-    queryFn: ({ signal }) => fetchSchema(signal),
+    queryKey: schemaQueryKey(contextName),
+    queryFn: ({ signal }) => {
+      if (!contextName) {
+        throw new Error("Select a DbContext before loading schema.");
+      }
+
+      return fetchSchema(contextName, signal);
+    },
     staleTime: DEFAULT_QUERY_STALE_TIME_MS,
     placeholderData: keepPreviousData,
+    enabled: !!contextName,
   });
 }
 
-export function useSchema(enabled = true) {
+export function useSchema(contextName: string | null, enabled = true) {
   return useQuery({
-    ...schemaQueryOptions(),
-    enabled,
+    ...schemaQueryOptions(contextName),
+    enabled: enabled && !!contextName,
   });
 }

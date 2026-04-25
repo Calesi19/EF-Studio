@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { EFSTUDIO_API_BASE } from "@/api/constants";
-import { tableDataQueryKey } from "@/api/data/fetchTableData";
 import type { RecordRow } from "@/types";
 
 interface DeleteRecordsRequest {
@@ -49,7 +48,7 @@ export function useDeleteRecords() {
     mutationFn: deleteRecords,
     onSuccess: async (response) => {
       await queryClient.invalidateQueries({
-        queryKey: tableDataQueryKey(response.tableKey),
+        queryKey: ["table-data", response.tableKey],
       });
     },
   });

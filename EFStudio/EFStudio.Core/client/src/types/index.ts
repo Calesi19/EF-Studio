@@ -19,6 +19,15 @@ export interface ColumnDef {
 
 export type RecordRow = Record<string, FieldValue>;
 
+export interface DbContextDef {
+  name: string;
+  displayName: string;
+  isSelected: boolean;
+  isDefault: boolean;
+  isAvailable: boolean;
+  activationError?: string;
+}
+
 export interface TableDef {
   key: string;
   name: string;

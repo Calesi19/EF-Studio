@@ -1,16 +1,18 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, type ReactNode, useContext, useState } from "react";
-import { useQueries } from "@tanstack/react-query";
-import { useDeleteRecords } from "@/api/data/deleteRecords";
+import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import { useQueries, useQueryClient } from "@tanstack/react-query";
+import { useDbContexts, useSelectDbContext } from "@/api/contexts/fetchDbContexts";
 import { tableDataQueryOptions } from "@/api/data/fetchTableData";
 import { useSchema } from "@/api/schema/fetchSchema";
-import type { FieldValue, SortState, TableDef, TabState } from "@/types";
+import type { DbContextDef, FieldValue, SortState, TableDef, TabState } from "@/types";
 import { DEFAULT_PAGE_NUMBER, DEFAULT_PAGE_SIZE, DEFAULT_SORT } from "@/pages/StudioPage/constants";
 import { useSettings, type NameDisplay } from "@/hooks/useSettings";
 
 const STORAGE_KEY_PAGE_SIZE = "ef-studio-page-size";
 
 type StudioContextType = {
+  contexts: DbContextDef[];
+  selectedContextName: string | null;
   tables: TableDef[];
   loading: boolean;
   error: string | null;
@@ -19,14 +21,14 @@ type StudioContextType = {
   activeTab: TabState | null;
   selectedTable: TableDef | null;
   currentRows: TableDef["rows"];
+  currentTotalRows: number;
+  currentTotalPages: number;
   effectiveSidebarOpen: boolean;
   tableLoadErrors: { tableKey: string; tableName: string; message: string }[];
   activeTableError: string | null;
   activeTableLoading: boolean;
-  activeTableDeleteError: string | null;
-  deletingRows: boolean;
-  deleteSelectionResetKey: number;
   setActiveTabId: (id: string) => void;
+  selectContext: (contextName: string) => Promise<void>;
   selectTable: (tableKey: string) => void;
   jumpToReference: (tableKey: string, filterValue: FieldValue) => void;
   closeTab: (id: string) => void;
@@ -37,7 +39,6 @@ type StudioContextType = {
   changePage: (page: number) => void;
   changePageSize: (pageSize: number) => void;
   changeFilter: (filter: string) => void;
-  deleteRows: (rows: TableDef["rows"]) => Promise<void>;
   nameDisplay: NameDisplay;
   setNameDisplay: (value: NameDisplay) => void;
 };
@@ -56,49 +57,80 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
   const [tabs, setTabs] = useState<TabState[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [tableDeleteErrors, setTableDeleteErrors] = useState<Record<string, string>>({});
-  const [deleteSelectionResetKey, setDeleteSelectionResetKey] = useState(0);
+  const [selectedContextName, setSelectedContextName] = useState<string | null>(null);
   const { nameDisplay, setNameDisplay } = useSettings();
+  const queryClient = useQueryClient();
   const [pageSize, setPageSize] = useState<number>(() => {
     const stored = localStorage.getItem(STORAGE_KEY_PAGE_SIZE);
-    const parsed = stored ? Number(stored) : NaN;
+    const parsed = stored ? Number(stored) : Number.NaN;
     return Number.isFinite(parsed) ? parsed : DEFAULT_PAGE_SIZE;
   });
-  const { data: schema = [], isLoading: isSchemaLoading, error: schemaError } = useSchema();
-  const deleteRecordsMutation = useDeleteRecords();
 
-  const openTableKeys = [...new Set(tabs.map((tab) => tab.tableKey))];
+  const { data: contexts = [], isLoading: isContextsLoading, error: contextsError } = useDbContexts();
+  const selectDbContextMutation = useSelectDbContext();
+
+  useEffect(() => {
+    if (selectedContextName) {
+      return;
+    }
+
+    const preferredContext = contexts.find((context) => context.isSelected || context.isDefault)
+      ?? (contexts.length === 1 ? contexts[0] : null);
+
+    if (preferredContext?.isAvailable) {
+      setSelectedContextName(preferredContext.name);
+    }
+  }, [contexts, selectedContextName]);
+
+  const { data: schema = [], isLoading: isSchemaLoading, error: schemaError } = useSchema(selectedContextName);
 
   const tableDataQueries = useQueries({
-    queries: openTableKeys.map((key) => tableDataQueryOptions(key)),
+    queries: tabs.map((tab) =>
+      tableDataQueryOptions(
+        selectedContextName,
+        tab.tableKey,
+        tab.pagination,
+        tab.filter,
+        tab.sort,
+      ),
+    ),
   });
 
-  const tableDataMap = new Map(openTableKeys.map((key, index) => [key, tableDataQueries[index]]));
+  const tableDataMap = new Map(tabs.map((tab, index) => [tab.id, tableDataQueries[index]]));
 
   const tables = schema.map((table) => ({
     ...table,
-    rows: tableDataMap.get(table.key)?.data ?? [],
+    rows: [],
   }));
 
-  const tableLoadErrors = openTableKeys.flatMap((key) => {
-    const query = tableDataMap.get(key);
-    const table = schema.find((t) => t.key === key);
+  const tableLoadErrors = tabs.flatMap((tab) => {
+    const query = tableDataMap.get(tab.id);
+    const table = schema.find((candidate) => candidate.key === tab.tableKey);
 
     return query?.error && table
-      ? [{ tableKey: key, tableName: nameDisplay === "model" ? table.modelDisplayName : table.name, message: toErrorMessage(query.error) }]
+      ? [{
+          tableKey: tab.tableKey,
+          tableName: nameDisplay === "model" ? table.modelDisplayName : table.name,
+          message: toErrorMessage(query.error),
+        }]
       : [];
   });
 
-  const loading = isSchemaLoading;
-  const error = schemaError ? toErrorMessage(schemaError) : null;
+  const loading = isContextsLoading || (!!selectedContextName && isSchemaLoading);
+  const error = contextsError
+    ? toErrorMessage(contextsError)
+    : schemaError
+      ? toErrorMessage(schemaError)
+      : null;
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null;
   const selectedTable = activeTab ? (tables.find((table) => table.key === activeTab.tableKey) ?? null) : null;
-  const currentRows = selectedTable?.rows ?? [];
+  const activeTableQuery = activeTab ? tableDataMap.get(activeTab.id) : undefined;
+  const currentRows = activeTableQuery?.data?.rows ?? [];
+  const currentTotalRows = activeTableQuery?.data?.totalRows ?? 0;
+  const currentTotalPages = activeTableQuery?.data?.totalPages ?? 1;
   const effectiveSidebarOpen = tabs.length === 0 ? true : sidebarOpen;
-  const activeTableQuery = activeTab ? tableDataMap.get(activeTab.tableKey) : undefined;
   const activeTableError = activeTableQuery?.error ? toErrorMessage(activeTableQuery.error) : null;
   const activeTableLoading = activeTableQuery?.isLoading ?? false;
-  const activeTableDeleteError = activeTab ? (tableDeleteErrors[activeTab.tableKey] ?? null) : null;
 
   function createTab(tableKey: string, filter = ""): TabState {
     return {
@@ -120,7 +152,20 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
     );
   }
 
+  async function selectContext(contextName: string) {
+    await selectDbContextMutation.mutateAsync(contextName);
+    setSelectedContextName(contextName);
+    setTabs([]);
+    setActiveTabId(null);
+    await queryClient.invalidateQueries({ queryKey: ["schema"] });
+    await queryClient.invalidateQueries({ queryKey: ["table-data"] });
+  }
+
   function selectTable(tableKey: string) {
+    if (!selectedContextName) {
+      return;
+    }
+
     const existingTab = tabs.find((tab) => tab.tableKey === tableKey);
 
     if (existingTab) {
@@ -134,6 +179,10 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
   }
 
   function jumpToReference(tableKey: string, filterValue: FieldValue) {
+    if (!selectedContextName) {
+      return;
+    }
+
     const filter = filterValue !== null ? String(filterValue) : "";
     const existingTab = tabs.find((tab) => tab.tableKey === tableKey);
 
@@ -212,11 +261,11 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
   function changePageSize(newSize: number) {
     setPageSize(newSize);
     localStorage.setItem(STORAGE_KEY_PAGE_SIZE, String(newSize));
-    setTabs((prev) =>
-      prev.map((tab) => ({
+    setTabs((previousTabs) =>
+      previousTabs.map((tab) => ({
         ...tab,
         pagination: { page: DEFAULT_PAGE_NUMBER, pageSize: newSize },
-      }))
+      })),
     );
   }
 
@@ -231,48 +280,11 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  async function deleteRows(rows: TableDef["rows"]) {
-    if (!activeTab || !selectedTable) {
-      return;
-    }
-
-    const primaryKeyColumns = selectedTable.columns.filter((column) => column.isPrimaryKey);
-    if (primaryKeyColumns.length === 0) {
-      const message = `The table '${selectedTable.name}' does not support delete operations because it has no primary key.`;
-      setTableDeleteErrors((current) => ({
-        ...current,
-        [activeTab.tableKey]: message,
-      }));
-      throw new Error(message);
-    }
-
-    setTableDeleteErrors((current) => {
-      const next = { ...current };
-      delete next[activeTab.tableKey];
-      return next;
-    });
-
-    try {
-      await deleteRecordsMutation.mutateAsync({
-        tableKey: activeTab.tableKey,
-        keys: rows.map((row) =>
-          Object.fromEntries(primaryKeyColumns.map((column) => [column.name, row[column.name] ?? null])),
-        ),
-      });
-      setDeleteSelectionResetKey((current) => current + 1);
-    } catch (error) {
-      const message = toErrorMessage(error);
-      setTableDeleteErrors((current) => ({
-        ...current,
-        [activeTab.tableKey]: message,
-      }));
-      throw error;
-    }
-  }
-
   return (
     <StudioContext.Provider
       value={{
+        contexts,
+        selectedContextName,
         tables,
         loading,
         error,
@@ -281,14 +293,14 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
         activeTab,
         selectedTable,
         currentRows,
+        currentTotalRows,
+        currentTotalPages,
         effectiveSidebarOpen,
         tableLoadErrors,
         activeTableError,
         activeTableLoading,
-        activeTableDeleteError,
-        deletingRows: deleteRecordsMutation.isPending,
-        deleteSelectionResetKey,
         setActiveTabId,
+        selectContext,
         selectTable,
         jumpToReference,
         closeTab,
@@ -299,7 +311,6 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
         changePage,
         changePageSize,
         changeFilter,
-        deleteRows,
         nameDisplay,
         setNameDisplay,
       }}

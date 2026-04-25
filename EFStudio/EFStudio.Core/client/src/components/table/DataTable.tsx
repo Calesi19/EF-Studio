@@ -1,5 +1,4 @@
 import { TableBody } from "@/components/ui/table";
-import { useTableState } from "@/hooks/useTableState";
 import type { ColumnDef, FieldValue, PaginationState, RecordRow, SortState } from "@/types";
 import { useEffect, useState } from "react";
 import { DeleteConfirmDialog } from "../records/DeleteConfirmDialog";
@@ -28,6 +27,8 @@ function initialWidths(columns: ColumnDef[]): Record<string, number> {
 interface DataTableProps {
   columns: ColumnDef[];
   rows: RecordRow[];
+  totalRows: number;
+  totalPages: number;
   filter: string;
   sort: SortState;
   pagination: PaginationState;
@@ -48,6 +49,8 @@ interface DataTableProps {
 export function DataTable({
   columns,
   rows,
+  totalRows,
+  totalPages,
   filter,
   sort,
   pagination,
@@ -126,9 +129,7 @@ export function DataTable({
     );
   }
 
-  const { paginatedRows, totalRows, totalPages } = useTableState(rows, orderedColumns, filter, sort, pagination);
-
-  const paginatedKeys = paginatedRows.map(getRowKey);
+  const paginatedKeys = rows.map(getRowKey);
   const allSelected = paginatedKeys.length > 0 && paginatedKeys.every((k) => selectedKeys.has(k));
   const someSelected = paginatedKeys.some((k) => selectedKeys.has(k));
 
@@ -205,14 +206,14 @@ export function DataTable({
             readOnly={readOnly}
           />
           <TableBody>
-            {paginatedRows.length === 0 ? (
+            {rows.length === 0 ? (
               <tr>
                 <td colSpan={orderedColumns.length + (readOnly ? 0 : 1)} className="py-16 text-center text-xs text-muted-foreground">
                   {filter ? "No records match your filter." : "No records found."}
                 </td>
               </tr>
             ) : (
-              paginatedRows.map((row, i) => (
+              rows.map((row, i) => (
                 <DataTableRow
                   key={i}
                   row={row}

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace EFStudio.Core.Services;
 
-public class SchemaService
+public class SchemaService : ISchemaService
 {
     private readonly ILogger<SchemaService> _logger;
 

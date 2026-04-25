@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Globalization;
 using System.Text.Json;
 using EFStudio.Core.Contracts;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace EFStudio.Core.Services;
 
-public class DataService
+public class DataService : IDataService
 {
     private readonly ILogger<DataService> _logger;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -18,6 +19,23 @@ public class DataService
     public async Task<TableDataResponseContract?> GetTableDataAsync(
         DbContext dbContext,
         TableDataRequestContract request,
+        CancellationToken cancellationToken
+    )
+    {
+        var page = await GetTablePageAsync(
+            dbContext,
+            new TablePageRequestContract(request.TableKey, 1, int.MaxValue),
+            cancellationToken
+        );
+
+        return page == null
+            ? null
+            : new TableDataResponseContract(page.Key, page.Name, page.Schema, page.Rows);
+    }
+
+    public async Task<TablePageResponseContract?> GetTablePageAsync(
+        DbContext dbContext,
+        TablePageRequestContract request,
         CancellationToken cancellationToken
     )
     {
@@ -58,7 +76,24 @@ public class DataService
             )
             .ToList();
 
-        return new TableDataResponseContract(tableKey, tableName, schema, rows);
+        var filteredRows = ApplyFilter(rows, request.Filter);
+        var sortedRows = ApplySort(filteredRows, request.SortColumn, request.SortDirection);
+        var pageSize = request.PageSize <= 0 ? 50 : request.PageSize;
+        var page = request.Page <= 0 ? 1 : request.Page;
+        var pagedRows = sortedRows
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        return new TablePageResponseContract(
+            tableKey,
+            tableName,
+            schema,
+            page,
+            pageSize,
+            sortedRows.Count,
+            pagedRows
+        );
     }
 
     public async Task<DeleteRecordsResponseContract> DeleteRecordsAsync(
@@ -268,6 +303,44 @@ public class DataService
     }
 
     private sealed record KeyColumn(IProperty Property, string ColumnName);
+
+    private static List<IReadOnlyDictionary<string, object?>> ApplyFilter(
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
+        string? filter
+    )
+    {
+        if (string.IsNullOrWhiteSpace(filter))
+        {
+            return rows.ToList();
+        }
+
+        return rows
+            .Where(row => row.Values.Any(value =>
+                value != null
+                && value.ToString()?.Contains(filter, StringComparison.OrdinalIgnoreCase) == true
+            ))
+            .ToList();
+    }
+
+    private static List<IReadOnlyDictionary<string, object?>> ApplySort(
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
+        string? sortColumn,
+        string? sortDirection
+    )
+    {
+        if (string.IsNullOrWhiteSpace(sortColumn))
+        {
+            return rows.ToList();
+        }
+
+        return rows
+            .OrderBy(row => row.TryGetValue(sortColumn, out var value) ? value?.ToString() : null, StringComparer.OrdinalIgnoreCase)
+            .Pipe(sorted =>
+                string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase)
+                    ? sorted.Reverse().ToList()
+                    : sorted.ToList()
+            );
+    }
 }
 
 public static class DbContextExtensions
@@ -281,4 +354,7 @@ public static class DbContextExtensions
                 .MakeGenericMethod(entityType)
                 .Invoke(context, null)!;
     }
+
+    public static TResult Pipe<TSource, TResult>(this TSource source, Func<TSource, TResult> transform) =>
+        transform(source);
 }

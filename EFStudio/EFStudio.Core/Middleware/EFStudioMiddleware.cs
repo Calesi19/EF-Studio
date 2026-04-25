@@ -14,6 +14,8 @@ public class EFStudioMiddleware
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private const string RootPath = "/efstudio";
+    private const string ContextsPath = $"{RootPath}/api/contexts";
+    private const string ContextSelectionPath = $"{RootPath}/api/contexts/select";
     private const string SchemaPath = $"{RootPath}/api/schema";
     private const string DataPath = $"{RootPath}/api/data";
 
@@ -27,6 +29,7 @@ public class EFStudioMiddleware
         HttpContext context,
         SchemaService schemaService,
         DataService dataService,
+        StudioAssetService assetService,
         DbContext dbContext
     )
     {
@@ -34,6 +37,73 @@ public class EFStudioMiddleware
 
         try
         {
+            if (path.Equals(ContextsPath, StringComparison.OrdinalIgnoreCase))
+            {
+                var contextName = dbContext.GetType().Name;
+                var payload = new DbContextListResponseContract(
+                    new[]
+                    {
+                        new DbContextInfoContract(
+                            contextName,
+                            dbContext.GetType().FullName ?? contextName,
+                            IsSelected: true,
+                            IsDefault: true,
+                            IsAvailable: true,
+                            CreatedByDesignTimeFactory: false,
+                            ActivationError: null
+                        ),
+                    },
+                    contextName
+                );
+
+                await WriteJsonAsync(context, StatusCodes.Status200OK, payload);
+                return;
+            }
+
+            if (
+                path.Equals(ContextSelectionPath, StringComparison.OrdinalIgnoreCase)
+                && HttpMethods.IsPost(context.Request.Method)
+            )
+            {
+                var request = await JsonSerializer.DeserializeAsync<SelectDbContextRequestContract>(
+                    context.Request.Body,
+                    JsonOptions,
+                    context.RequestAborted
+                );
+
+                var contextName = dbContext.GetType().Name;
+                if (request == null || !string.Equals(request.ContextName, contextName, StringComparison.Ordinal))
+                {
+                    await WriteErrorAsync(
+                        context,
+                        StatusCodes.Status404NotFound,
+                        $"The DbContext '{request?.ContextName}' could not be found."
+                    );
+                    return;
+                }
+
+                await WriteJsonAsync(
+                    context,
+                    StatusCodes.Status200OK,
+                    new DbContextListResponseContract(
+                        new[]
+                        {
+                            new DbContextInfoContract(
+                                contextName,
+                                dbContext.GetType().FullName ?? contextName,
+                                IsSelected: true,
+                                IsDefault: true,
+                                IsAvailable: true,
+                                CreatedByDesignTimeFactory: false,
+                                ActivationError: null
+                            ),
+                        },
+                        contextName
+                    )
+                );
+                return;
+            }
+
             if (path.Equals(SchemaPath, StringComparison.OrdinalIgnoreCase))
             {
                 var schema = schemaService.GetSchema(dbContext);
@@ -56,10 +126,16 @@ public class EFStudioMiddleware
                         return;
                     }
 
-                    var request = new TableDataRequestContract(tableKey);
-                    var data = await dataService.GetTableDataAsync(
+                    var data = await dataService.GetTablePageAsync(
                         dbContext,
-                        request,
+                        new TablePageRequestContract(
+                            tableKey,
+                            ParseInt(context.Request.Query["page"], 1),
+                            ParseInt(context.Request.Query["pageSize"], 50),
+                            context.Request.Query["filter"],
+                            context.Request.Query["sortColumn"],
+                            context.Request.Query["sortDirection"]
+                        ),
                         context.RequestAborted
                     );
 
@@ -112,7 +188,7 @@ public class EFStudioMiddleware
 
             if (path.StartsWith(RootPath, StringComparison.OrdinalIgnoreCase))
             {
-                await ServeEmbeddedFile(context, path);
+                await ServeEmbeddedFile(context, path, assetService);
                 return;
             }
 
@@ -149,27 +225,18 @@ public class EFStudioMiddleware
         }
     }
 
-    private async Task ServeEmbeddedFile(HttpContext context, string path)
+    private async Task ServeEmbeddedFile(HttpContext context, string path, StudioAssetService assetService)
     {
-        var assembly = typeof(EFStudioMiddleware).Assembly;
-
         string resourcePath =
             path.Length <= RootPath.Length ? "index.html" : path.Substring(RootPath.Length + 1);
-        if (string.IsNullOrEmpty(resourcePath))
-            resourcePath = "index.html";
 
-        var manifestPath = $"EFStudio.Core.wwwroot.{resourcePath.Replace("/", ".")}";
-
-        using var stream = assembly.GetManifestResourceStream(manifestPath);
-
-        if (stream == null)
+        if (!assetService.TryOpenAsset(resourcePath, out var stream, out var contentType) || stream == null)
         {
-            _logger.LogWarning("EFStudio embedded asset not found: {ResourcePath}.", manifestPath);
             context.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
         }
 
-        context.Response.ContentType = GetContentType(resourcePath);
+        context.Response.ContentType = contentType;
         await stream.CopyToAsync(context.Response.Body);
     }
 
@@ -186,8 +253,8 @@ public class EFStudioMiddleware
         return WriteJsonAsync(context, statusCode, new ErrorResponseContract(message));
     }
 
-    private string GetContentType(string path) =>
-        path.EndsWith(".js") ? "application/javascript"
-        : path.EndsWith(".css") ? "text/css"
-        : "text/html";
+    private static int ParseInt(string? value, int fallback)
+    {
+        return int.TryParse(value, out var parsed) ? parsed : fallback;
+    }
 }
