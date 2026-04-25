@@ -12,6 +12,11 @@ interface DataTableRowProps {
   onDelete: (row: RecordRow) => void;
   onJumpToRef: (tableKey: string, value: FieldValue) => void;
   readOnly?: boolean;
+  pendingCellEdits?: Record<string, FieldValue>;
+  editingColumnName?: string | null;
+  onCellDoubleClick?: (columnName: string) => void;
+  onCommitCellEdit?: (columnName: string, value: FieldValue) => void;
+  onCancelCellEdit?: () => void;
 }
 
 export function DataTableRow({
@@ -21,9 +26,24 @@ export function DataTableRow({
   onToggleSelect,
   onJumpToRef,
   readOnly = false,
+  pendingCellEdits,
+  editingColumnName,
+  onCellDoubleClick,
+  onCommitCellEdit,
+  onCancelCellEdit,
 }: DataTableRowProps) {
+  const hasPending = pendingCellEdits && Object.keys(pendingCellEdits).length > 0;
+
   return (
-    <TableRow className={`group h-9 ${isSelected ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-muted/30"}`}>
+    <TableRow
+      className={`group h-9 ${
+        isSelected
+          ? "bg-primary/5 hover:bg-primary/10"
+          : hasPending
+            ? "hover:bg-amber-500/5"
+            : "hover:bg-muted/30"
+      }`}
+    >
       {!readOnly && (
         <TableCell
           className={`sticky left-0 z-10 border-b border-border px-0 py-0 align-middle shadow-[inset_-1px_0_0_var(--color-border)] ${
@@ -41,17 +61,48 @@ export function DataTableRow({
           </div>
         </TableCell>
       )}
-      {columns.map((col) => (
-        <TableCell key={col.name} className="overflow-hidden border-r border-b border-border px-3 py-0">
-          <div className="flex items-center h-9">
-            <DataTableCell
-              value={row[col.name] ?? null}
-              column={col}
-              onJumpToRef={col.isForeignKey && col.foreignKeyTable ? onJumpToRef : undefined}
-            />
-          </div>
-        </TableCell>
-      ))}
+      {columns.map((col) => {
+        const effectiveValue =
+          pendingCellEdits && col.name in pendingCellEdits
+            ? pendingCellEdits[col.name]
+            : (row[col.name] ?? null);
+        const isPendingEdit = !!(pendingCellEdits && col.name in pendingCellEdits);
+        const isRequiredAndEmpty =
+          isPendingEdit &&
+          !col.isNullable &&
+          !col.isPrimaryKey &&
+          (effectiveValue === null || effectiveValue === "");
+        const isEditing = editingColumnName === col.name;
+
+        return (
+          <TableCell
+            key={col.name}
+            className={`overflow-hidden border-r border-b border-border px-0 py-0 ${isEditing ? "p-0" : ""}`}
+          >
+            <div className={`flex items-center h-9 ${isEditing ? "px-0" : "px-3"}`}>
+              <DataTableCell
+                value={effectiveValue}
+                column={col}
+                onJumpToRef={col.isForeignKey && col.foreignKeyTable ? onJumpToRef : undefined}
+                isEditing={isEditing}
+                isPendingEdit={isPendingEdit}
+                isRequiredAndEmpty={isRequiredAndEmpty}
+                onDoubleClick={
+                  !readOnly && !col.isPrimaryKey && onCellDoubleClick
+                    ? () => onCellDoubleClick(col.name)
+                    : undefined
+                }
+                onCommitEdit={
+                  isEditing && onCommitCellEdit
+                    ? (value) => onCommitCellEdit(col.name, value)
+                    : undefined
+                }
+                onCancelEdit={isEditing ? onCancelCellEdit : undefined}
+              />
+            </div>
+          </TableCell>
+        );
+      })}
     </TableRow>
   );
 }

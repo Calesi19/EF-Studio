@@ -174,6 +174,45 @@ public sealed class StudioServer
             }
         );
 
+        app.MapPut(
+            "/efstudio/api/data",
+            async (HttpContext httpContext, IDbContextCatalog catalog, IDataService dataService) =>
+            {
+                try
+                {
+                    var request = await httpContext.Request.ReadFromJsonAsync<UpdateRecordsRequestContract>(
+                        JsonOptions,
+                        httpContext.RequestAborted
+                    );
+
+                    if (request == null)
+                    {
+                        return Results.BadRequest(
+                            new ErrorResponseContract("Provide an update request before updating records.")
+                        );
+                    }
+
+                    var contextName = httpContext.Request.Query["context"].ToString();
+                    await using var lease = await catalog.LeaseDbContextAsync(
+                        string.IsNullOrWhiteSpace(contextName) ? null : contextName,
+                        httpContext.RequestAborted
+                    );
+
+                    var result = await dataService.UpdateRecordsAsync(
+                        lease.Context,
+                        request,
+                        httpContext.RequestAborted
+                    );
+
+                    return Results.Json(result, JsonOptions);
+                }
+                catch (Exception exception)
+                {
+                    return Results.BadRequest(new ErrorResponseContract(GetErrorMessage(exception)));
+                }
+            }
+        );
+
         app.MapGet(
             "/efstudio/{**assetPath}",
             async (

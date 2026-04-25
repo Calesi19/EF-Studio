@@ -48,6 +48,8 @@ export interface PaginationState {
   pageSize: number;
 }
 
+export type PendingEdits = Map<string, Record<string, FieldValue>>;
+
 export interface TabState {
   id: string;
   tableKey: string;

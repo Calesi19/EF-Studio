@@ -15,6 +15,12 @@ export function StudioWorkspace() {
     changeSort,
     deleteRows,
     deleteSelectionResetKey,
+    pendingEdits,
+    hasPendingEdits,
+    savingEdits,
+    setCellEdit,
+    saveEdits,
+    discardEdits,
   } = useStudioContext();
 
   if (!activeTab || !selectedTable) {
@@ -42,6 +48,12 @@ export function StudioWorkspace() {
       onDeleteRecord={() => {}}
       onBulkDelete={deleteRows}
       onJumpToRef={jumpToReference}
+      pendingEdits={pendingEdits}
+      hasPendingEdits={hasPendingEdits}
+      savingEdits={savingEdits}
+      onCellEdit={setCellEdit}
+      onSaveEdits={saveEdits}
+      onDiscardEdits={discardEdits}
     />
   );
 }

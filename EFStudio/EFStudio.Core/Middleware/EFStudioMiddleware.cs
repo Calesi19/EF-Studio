@@ -181,8 +181,36 @@ public class EFStudioMiddleware
                     return;
                 }
 
+                if (HttpMethods.IsPut(context.Request.Method))
+                {
+                    var request = await JsonSerializer.DeserializeAsync<UpdateRecordsRequestContract>(
+                        context.Request.Body,
+                        JsonOptions,
+                        context.RequestAborted
+                    );
+
+                    if (request == null)
+                    {
+                        await WriteErrorAsync(
+                            context,
+                            StatusCodes.Status400BadRequest,
+                            "Provide an update request before updating records."
+                        );
+                        return;
+                    }
+
+                    var result = await dataService.UpdateRecordsAsync(
+                        dbContext,
+                        request,
+                        context.RequestAborted
+                    );
+
+                    await WriteJsonAsync(context, StatusCodes.Status200OK, result);
+                    return;
+                }
+
                 context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
-                context.Response.Headers.Allow = $"{HttpMethods.Get}, {HttpMethods.Delete}";
+                context.Response.Headers.Allow = $"{HttpMethods.Get}, {HttpMethods.Delete}, {HttpMethods.Put}";
                 return;
             }
 
@@ -209,6 +237,17 @@ public class EFStudioMiddleware
                 context,
                 StatusCodes.Status400BadRequest,
                 "Provide a valid delete request before deleting records."
+            );
+        }
+        catch (JsonException) when (
+            path.Equals(DataPath, StringComparison.OrdinalIgnoreCase) &&
+            HttpMethods.IsPut(context.Request.Method)
+        )
+        {
+            await WriteErrorAsync(
+                context,
+                StatusCodes.Status400BadRequest,
+                "Provide a valid update request before updating records."
             );
         }
         catch (Exception exception) when (

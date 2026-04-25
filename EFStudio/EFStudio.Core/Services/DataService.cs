@@ -223,6 +223,238 @@ public class DataService : IDataService
         }
     }
 
+    public async Task<UpdateRecordsResponseContract> UpdateRecordsAsync(
+        DbContext dbContext,
+        UpdateRecordsRequestContract request,
+        CancellationToken cancellationToken
+    )
+    {
+        if (string.IsNullOrWhiteSpace(request.TableKey))
+        {
+            throw new EFStudioRequestException(
+                StatusCodes.Status400BadRequest,
+                "Choose a table before updating records."
+            );
+        }
+
+        if (request.Updates.Count == 0)
+        {
+            throw new EFStudioRequestException(
+                StatusCodes.Status400BadRequest,
+                "Provide at least one record to update."
+            );
+        }
+
+        var entityType = dbContext
+            .Model.GetEntityTypes()
+            .FirstOrDefault(t => TableKeyFactory.Create(t) == request.TableKey);
+
+        if (entityType == null)
+        {
+            throw new EFStudioRequestException(
+                StatusCodes.Status404NotFound,
+                $"The table '{request.TableKey}' could not be found."
+            );
+        }
+
+        var primaryKey = entityType.FindPrimaryKey();
+        if (primaryKey == null || primaryKey.Properties.Count == 0)
+        {
+            throw new EFStudioRequestException(
+                StatusCodes.Status400BadRequest,
+                $"The table '{request.TableKey}' does not support update operations because it has no primary key."
+            );
+        }
+
+        var tableName = entityType.GetTableName() ?? entityType.DisplayName();
+        var schema = entityType.GetSchema();
+        var tableKey = TableKeyFactory.Create(schema, tableName);
+        var tableIdentifier = StoreObjectIdentifier.Table(tableName, schema);
+        var keyColumns = primaryKey.Properties
+            .Select(property => new KeyColumn(
+                property,
+                property.GetColumnName(tableIdentifier) ?? property.Name
+            ))
+            .ToList();
+
+        var allColumns = entityType.GetProperties()
+            .Select(property => new KeyColumn(
+                property,
+                property.GetColumnName(tableIdentifier) ?? property.Name
+            ))
+            .ToList();
+
+        _logger.LogInformation(
+            "Updating {RecordCount} EFStudio records in {TableKey}.",
+            request.Updates.Count,
+            tableKey
+        );
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            foreach (var update in request.Updates)
+            {
+                var orderedKeyValues = keyColumns
+                    .Select(keyColumn => ConvertKeyValue(keyColumn, update.Keys, tableKey))
+                    .ToArray();
+
+                var entity = await dbContext.FindAsync(
+                    entityType.ClrType,
+                    orderedKeyValues,
+                    cancellationToken
+                );
+
+                if (entity == null)
+                {
+                    throw new EFStudioRequestException(
+                        StatusCodes.Status404NotFound,
+                        $"A selected record in '{tableKey}' could not be found."
+                    );
+                }
+
+                foreach (var (columnName, jsonValue) in update.Values)
+                {
+                    var column = allColumns.FirstOrDefault(c =>
+                        string.Equals(c.ColumnName, columnName, StringComparison.OrdinalIgnoreCase));
+
+                    if (column == null || column.Property.IsPrimaryKey())
+                    {
+                        continue;
+                    }
+
+                    var converted = ConvertPropertyValue(column, jsonValue, tableKey);
+                    column.Property.PropertyInfo?.SetValue(entity, converted);
+                }
+            }
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
+            return new UpdateRecordsResponseContract(tableKey, request.Updates.Count);
+        }
+        catch (EFStudioRequestException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+        catch (DbUpdateException exception)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            _logger.LogWarning(
+                exception,
+                "Update failed for EFStudio table {TableKey}.",
+                tableKey
+            );
+
+            throw new EFStudioRequestException(
+                StatusCodes.Status409Conflict,
+                $"EFStudio could not update the selected records in '{tableKey}'. Check that all values are valid and foreign key references exist."
+            );
+        }
+        catch (InvalidOperationException exception)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            _logger.LogWarning(
+                exception,
+                "Update validation failed for EFStudio table {TableKey}.",
+                tableKey
+            );
+
+            throw new EFStudioRequestException(
+                StatusCodes.Status409Conflict,
+                $"EFStudio could not update the selected records in '{tableKey}'. Check that all values are valid."
+            );
+        }
+    }
+
+    private object? ConvertPropertyValue(
+        KeyColumn column,
+        JsonElement jsonValue,
+        string tableKey
+    )
+    {
+        var targetType = column.Property.ClrType;
+        var underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+        var isNullable = Nullable.GetUnderlyingType(targetType) != null
+            || !targetType.IsValueType
+            || column.Property.IsNullable;
+
+        if (jsonValue.ValueKind == JsonValueKind.Null)
+        {
+            if (isNullable)
+            {
+                return null;
+            }
+
+            throw new EFStudioRequestException(
+                StatusCodes.Status400BadRequest,
+                $"The column '{column.ColumnName}' in '{tableKey}' cannot be null."
+            );
+        }
+
+        try
+        {
+            if (underlyingType == typeof(string))
+            {
+                return jsonValue.ValueKind == JsonValueKind.String
+                    ? jsonValue.GetString()
+                    : jsonValue.ToString();
+            }
+
+            if (underlyingType.IsEnum)
+            {
+                return jsonValue.ValueKind == JsonValueKind.String
+                    ? Enum.Parse(underlyingType, jsonValue.GetString()!, ignoreCase: true)
+                    : Enum.ToObject(underlyingType, jsonValue.Deserialize(typeof(int), JsonOptions)!);
+            }
+
+            if (underlyingType == typeof(Guid))
+            {
+                return jsonValue.ValueKind == JsonValueKind.String
+                    ? Guid.Parse(jsonValue.GetString()!)
+                    : Guid.Parse(jsonValue.ToString());
+            }
+
+            if (underlyingType == typeof(DateOnly))
+            {
+                return DateOnly.Parse(jsonValue.GetString()!, CultureInfo.InvariantCulture);
+            }
+
+            if (underlyingType == typeof(TimeOnly))
+            {
+                return TimeOnly.Parse(jsonValue.GetString()!, CultureInfo.InvariantCulture);
+            }
+
+            if (underlyingType == typeof(DateTime) || underlyingType == typeof(DateTimeOffset))
+            {
+                var raw = jsonValue.ValueKind == JsonValueKind.String
+                    ? jsonValue.GetString()!
+                    : jsonValue.ToString();
+                return underlyingType == typeof(DateTimeOffset)
+                    ? (object)DateTimeOffset.Parse(raw, CultureInfo.InvariantCulture)
+                    : DateTime.Parse(raw, CultureInfo.InvariantCulture);
+            }
+
+            var value = jsonValue.Deserialize(underlyingType, JsonOptions);
+            return value;
+        }
+        catch (Exception exception) when (
+            exception is FormatException
+                or InvalidOperationException
+                or JsonException
+                or OverflowException
+                or ArgumentException
+        )
+        {
+            throw new EFStudioRequestException(
+                StatusCodes.Status400BadRequest,
+                $"The value for '{column.ColumnName}' in '{tableKey}' is invalid."
+            );
+        }
+    }
+
     private object ConvertKeyValue(
         KeyColumn keyColumn,
         IReadOnlyDictionary<string, JsonElement> keyValues,

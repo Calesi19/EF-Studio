@@ -48,7 +48,7 @@ jobs:
 
       - name: Pack NuGet package
         run: >
-          dotnet pack EFStudio/EFStudio.Core/EFStudio.Core.csproj
+          dotnet pack EFStudio/EFStudio.Tool/EFStudio.Tool.csproj
           --configuration Release
           --no-build
           --output ./artifacts

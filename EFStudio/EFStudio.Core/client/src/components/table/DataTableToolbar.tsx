@@ -11,6 +11,10 @@ interface DataTableToolbarProps {
   selectedCount: number;
   onBulkDelete: () => void;
   readOnly?: boolean;
+  hasPendingEdits?: boolean;
+  savingEdits?: boolean;
+  onSaveEdits?: () => void;
+  onDiscardEdits?: () => void;
 }
 
 export function DataTableToolbar({
@@ -21,11 +25,36 @@ export function DataTableToolbar({
   selectedCount,
   onBulkDelete,
   readOnly = false,
+  hasPendingEdits = false,
+  savingEdits = false,
+  onSaveEdits,
+  onDiscardEdits,
 }: DataTableToolbarProps) {
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-2 border-b border-border">
       <div className="flex items-center gap-2">
-        {!readOnly && selectedCount > 0 ? (
+        {!readOnly && hasPendingEdits ? (
+          <>
+            <span className="text-xs text-amber-600 dark:text-amber-400">Unsaved changes</span>
+            <Button
+              size="sm"
+              onClick={onSaveEdits}
+              disabled={savingEdits}
+              className="h-7 text-xs"
+            >
+              {savingEdits ? "Saving…" : "Save"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onDiscardEdits}
+              disabled={savingEdits}
+              className="h-7 text-xs"
+            >
+              Discard
+            </Button>
+          </>
+        ) : !readOnly && selectedCount > 0 ? (
           <>
             <span className="text-xs text-muted-foreground">
               {selectedCount} {selectedCount === 1 ? "row" : "rows"} selected
@@ -61,7 +90,7 @@ export function DataTableToolbar({
           </div>
         )}
       </div>
-      {!readOnly && canAddRecord && (
+      {!readOnly && canAddRecord && !hasPendingEdits && (
         <Button size="sm" onClick={onAddRecord} className="h-7 text-xs gap-1">
           <span>+</span>
           Add record

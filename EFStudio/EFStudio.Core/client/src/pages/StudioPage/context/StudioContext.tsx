@@ -4,8 +4,9 @@ import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { useDbContexts, useSelectDbContext } from "@/api/contexts/fetchDbContexts";
 import { tableDataQueryOptions } from "@/api/data/fetchTableData";
 import { useDeleteRecords } from "@/api/data/deleteRecords";
+import { useUpdateRecords } from "@/api/data/updateRecords";
 import { useSchema } from "@/api/schema/fetchSchema";
-import type { DbContextDef, FieldValue, RecordRow, SortState, TableDef, TabState } from "@/types";
+import type { ColumnDef, DbContextDef, FieldValue, PendingEdits, RecordRow, SortState, TableDef, TabState } from "@/types";
 import { DEFAULT_PAGE_NUMBER, DEFAULT_PAGE_SIZE, DEFAULT_SORT } from "@/pages/StudioPage/constants";
 import { useSettings, type NameDisplay } from "@/hooks/useSettings";
 
@@ -46,6 +47,13 @@ type StudioContextType = {
   activeTableDeleteError: string | null;
   deletingRows: boolean;
   deleteRows: (rows: RecordRow[]) => Promise<void>;
+  pendingEdits: PendingEdits;
+  hasPendingEdits: boolean;
+  savingEdits: boolean;
+  activeTableUpdateError: string | null;
+  setCellEdit: (row: RecordRow, columnName: string, value: FieldValue) => void;
+  saveEdits: () => Promise<void>;
+  discardEdits: () => void;
 };
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -73,10 +81,13 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
 
   const [tableDeleteErrors, setTableDeleteErrors] = useState<Record<string, string>>({});
   const [deleteSelectionResetKey, setDeleteSelectionResetKey] = useState(0);
+  const [pendingEdits, setPendingEdits] = useState<PendingEdits>(new Map());
+  const [tableUpdateErrors, setTableUpdateErrors] = useState<Record<string, string>>({});
 
   const { data: contexts = [], isLoading: isContextsLoading, error: contextsError } = useDbContexts();
   const selectDbContextMutation = useSelectDbContext();
   const deleteRecordsMutation = useDeleteRecords();
+  const updateRecordsMutation = useUpdateRecords();
 
   useEffect(() => {
     if (selectedContextName) {
@@ -142,6 +153,17 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
   const activeTableLoading = activeTableQuery?.isLoading ?? false;
   const activeTableDeleteError = activeTab ? (tableDeleteErrors[activeTab.tableKey] ?? null) : null;
   const deletingRows = deleteRecordsMutation.isPending;
+  const hasPendingEdits = pendingEdits.size > 0;
+  const savingEdits = updateRecordsMutation.isPending;
+  const activeTableUpdateError = activeTab ? (tableUpdateErrors[activeTab.tableKey] ?? null) : null;
+
+  useEffect(() => {
+    setPendingEdits(new Map());
+  }, [activeTabId]);
+
+  function serializeRowPk(row: RecordRow, pkColumns: ColumnDef[]): string {
+    return pkColumns.map((col) => `${col.name}:${String(row[col.name])}`).join("|");
+  }
 
   function createTab(tableKey: string, filter = ""): TabState {
     return {
@@ -313,6 +335,78 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  function setCellEdit(row: RecordRow, columnName: string, value: FieldValue) {
+    if (!selectedTable) return;
+
+    const pkColumns = selectedTable.columns.filter((col) => col.isPrimaryKey);
+    if (pkColumns.length === 0) return;
+
+    const rowPk = serializeRowPk(row, pkColumns);
+    const originalValue = row[columnName] ?? null;
+
+    setPendingEdits((current) => {
+      const next = new Map(current);
+      const rowEdits = { ...(next.get(rowPk) ?? {}) };
+
+      if (value === originalValue || (value === "" && originalValue === null)) {
+        delete rowEdits[columnName];
+      } else {
+        rowEdits[columnName] = value;
+      }
+
+      if (Object.keys(rowEdits).length === 0) {
+        next.delete(rowPk);
+      } else {
+        next.set(rowPk, rowEdits);
+      }
+
+      return next;
+    });
+  }
+
+  async function saveEdits() {
+    if (!activeTab || !selectedTable) return;
+
+    const pkColumns = selectedTable.columns.filter((col) => col.isPrimaryKey);
+    if (pkColumns.length === 0) {
+      const message = `The table '${selectedTable.name}' does not support update operations because it has no primary key.`;
+      setTableUpdateErrors((current) => ({ ...current, [activeTab.tableKey]: message }));
+      throw new Error(message);
+    }
+
+    setTableUpdateErrors((current) => {
+      const next = { ...current };
+      delete next[activeTab.tableKey];
+      return next;
+    });
+
+    const updates = Array.from(pendingEdits.entries()).map(([rowPk, changedValues]) => {
+      const keys = Object.fromEntries(
+        rowPk.split("|").map((part) => {
+          const colonIndex = part.indexOf(":");
+          return [part.slice(0, colonIndex), part.slice(colonIndex + 1)] as [string, FieldValue];
+        })
+      );
+      return { keys, values: changedValues };
+    });
+
+    try {
+      await updateRecordsMutation.mutateAsync({
+        tableKey: activeTab.tableKey,
+        updates,
+      });
+      setPendingEdits(new Map());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save changes.";
+      setTableUpdateErrors((current) => ({ ...current, [activeTab.tableKey]: message }));
+      throw error;
+    }
+  }
+
+  function discardEdits() {
+    setPendingEdits(new Map());
+  }
+
   function changeFilter(filter: string) {
     if (!activeTab) {
       return;
@@ -361,6 +455,13 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
         activeTableDeleteError,
         deletingRows,
         deleteRows,
+        pendingEdits,
+        hasPendingEdits,
+        savingEdits,
+        activeTableUpdateError,
+        setCellEdit,
+        saveEdits,
+        discardEdits,
       }}
     >
       {children}

@@ -1,5 +1,5 @@
 import { TableBody } from "@/components/ui/table";
-import type { ColumnDef, FieldValue, PaginationState, RecordRow, SortState } from "@/types";
+import type { ColumnDef, FieldValue, PaginationState, PendingEdits, RecordRow, SortState } from "@/types";
 import { useEffect, useState } from "react";
 import { DeleteConfirmDialog } from "../records/DeleteConfirmDialog";
 import { DataTableHeader } from "./DataTableHeader";
@@ -24,6 +24,10 @@ function initialWidths(columns: ColumnDef[]): Record<string, number> {
   return Object.fromEntries(columns.map((col) => [col.name, colWidth(col)]));
 }
 
+function serializeRowPk(row: RecordRow, pkColumns: ColumnDef[]): string {
+  return pkColumns.map((col) => `${col.name}:${String(row[col.name])}`).join("|");
+}
+
 interface DataTableProps {
   columns: ColumnDef[];
   rows: RecordRow[];
@@ -44,6 +48,12 @@ interface DataTableProps {
   onBulkDelete: (rows: RecordRow[]) => void;
   onJumpToRef: (tableKey: string, value: FieldValue) => void;
   readOnly?: boolean;
+  pendingEdits?: PendingEdits;
+  hasPendingEdits?: boolean;
+  savingEdits?: boolean;
+  onCellEdit?: (row: RecordRow, columnName: string, value: FieldValue) => void;
+  onSaveEdits?: () => void;
+  onDiscardEdits?: () => void;
 }
 
 export function DataTable({
@@ -66,6 +76,12 @@ export function DataTable({
   onBulkDelete,
   onJumpToRef,
   readOnly = false,
+  pendingEdits,
+  hasPendingEdits = false,
+  savingEdits = false,
+  onCellEdit,
+  onSaveEdits,
+  onDiscardEdits,
 }: DataTableProps) {
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -73,6 +89,7 @@ export function DataTable({
   const [columnOrder, setColumnOrder] = useState<string[]>(() => columns.map((c) => c.name));
   const [draggedCol, setDraggedCol] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+  const [editingCell, setEditingCell] = useState<{ rowPk: string; columnName: string } | null>(null);
 
   useEffect(() => {
     setSelectedKeys(new Set());
@@ -82,9 +99,15 @@ export function DataTable({
     setSelectedKeys(new Set());
   }, [selectionResetKey]);
 
+  useEffect(() => {
+    setEditingCell(null);
+  }, [columns]);
+
   const orderedColumns = columnOrder
     .map((name) => columns.find((c) => c.name === name))
     .filter((c): c is ColumnDef => c !== undefined);
+
+  const pkColumns = orderedColumns.filter((c) => c.isPrimaryKey);
 
   function handleResizeColumn(name: string, width: number) {
     setColumnWidths((prev) => ({ ...prev, [name]: width }));
@@ -118,7 +141,6 @@ export function DataTable({
     setDragOverCol(null);
   }
 
-  const pkColumns = orderedColumns.filter((c) => c.isPrimaryKey);
   function getRowKey(row: RecordRow): string {
     if (pkColumns.length === 0) {
       return JSON.stringify(row);
@@ -162,6 +184,23 @@ export function DataTable({
     setSelectedKeys(new Set());
   }
 
+  function handleCellDoubleClick(row: RecordRow, columnName: string) {
+    if (!onCellEdit || pkColumns.length === 0) return;
+    const rowPk = serializeRowPk(row, pkColumns);
+    setEditingCell({ rowPk, columnName });
+  }
+
+  function handleCommitCellEdit(row: RecordRow, columnName: string, value: FieldValue) {
+    if (onCellEdit) {
+      onCellEdit(row, columnName, value);
+    }
+    setEditingCell(null);
+  }
+
+  function handleCancelCellEdit() {
+    setEditingCell(null);
+  }
+
   const tableWidth =
     (readOnly ? 0 : READ_WRITE_SELECTION_COLUMN_WIDTH) +
     orderedColumns.reduce((sum, col) => sum + (columnWidths[col.name] ?? colWidth(col)), 0);
@@ -184,6 +223,10 @@ export function DataTable({
         selectedCount={selectedKeys.size}
         onBulkDelete={() => setBulkDeleteOpen(true)}
         readOnly={readOnly}
+        hasPendingEdits={hasPendingEdits}
+        savingEdits={savingEdits}
+        onSaveEdits={onSaveEdits}
+        onDiscardEdits={onDiscardEdits}
       />
       <div className="relative min-h-0 flex-1 overflow-auto overscroll-none">
         <table className="table-fixed border-separate border-spacing-0" style={{ minWidth: tableWidth, width: tableWidth }}>
@@ -213,19 +256,36 @@ export function DataTable({
                 </td>
               </tr>
             ) : (
-              rows.map((row, i) => (
-                <DataTableRow
-                  key={i}
-                  row={row}
-                  columns={orderedColumns}
-                  isSelected={selectedKeys.has(getRowKey(row))}
-                  onToggleSelect={() => toggleRow(getRowKey(row))}
-                  onEdit={onEditRecord}
-                  onDelete={onDeleteRecord}
-                  onJumpToRef={onJumpToRef}
-                  readOnly={readOnly}
-                />
-              ))
+              rows.map((row, i) => {
+                const rowPk = pkColumns.length > 0 ? serializeRowPk(row, pkColumns) : null;
+                const pendingCellEdits = rowPk ? pendingEdits?.get(rowPk) : undefined;
+                const isEditingRow = rowPk !== null && editingCell?.rowPk === rowPk;
+
+                return (
+                  <DataTableRow
+                    key={i}
+                    row={row}
+                    columns={orderedColumns}
+                    isSelected={selectedKeys.has(getRowKey(row))}
+                    onToggleSelect={() => toggleRow(getRowKey(row))}
+                    onEdit={onEditRecord}
+                    onDelete={onDeleteRecord}
+                    onJumpToRef={onJumpToRef}
+                    readOnly={readOnly}
+                    pendingCellEdits={pendingCellEdits}
+                    editingColumnName={isEditingRow ? editingCell?.columnName : null}
+                    onCellDoubleClick={
+                      onCellEdit ? (colName) => handleCellDoubleClick(row, colName) : undefined
+                    }
+                    onCommitCellEdit={
+                      onCellEdit
+                        ? (colName, value) => handleCommitCellEdit(row, colName, value)
+                        : undefined
+                    }
+                    onCancelCellEdit={handleCancelCellEdit}
+                  />
+                );
+              })
             )}
           </TableBody>
         </table>

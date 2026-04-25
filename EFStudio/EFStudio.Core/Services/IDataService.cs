@@ -22,4 +22,10 @@ public interface IDataService
         DeleteRecordsRequestContract request,
         CancellationToken cancellationToken
     );
+
+    Task<UpdateRecordsResponseContract> UpdateRecordsAsync(
+        DbContext dbContext,
+        UpdateRecordsRequestContract request,
+        CancellationToken cancellationToken
+    );
 }
