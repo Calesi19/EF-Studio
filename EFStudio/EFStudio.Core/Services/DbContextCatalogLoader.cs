@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Text;
 using System.Text.Json;
+using System.Collections.Concurrent;
 using EFStudio.Core.Contracts;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +15,10 @@ namespace EFStudio.Core.Services;
 
 public sealed class DbContextCatalogLoader
 {
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> ProjectBuildLocks = new(
+        StringComparer.OrdinalIgnoreCase
+    );
+
     public async Task<DiscoveredDbContextCatalog> LoadAsync(
         DbContextDiscoveryOptions options,
         CancellationToken cancellationToken = default
@@ -366,41 +371,55 @@ public sealed class DbContextCatalogLoader
         CancellationToken cancellationToken
     )
     {
-        var frameworkInfo = await GetProjectPropertiesAsync(
-            projectPath,
-            new[] { "TargetFramework", "TargetFrameworks" },
-            framework: null,
-            cancellationToken
+        var normalizedProjectPath = Path.GetFullPath(projectPath);
+        var buildLock = ProjectBuildLocks.GetOrAdd(
+            normalizedProjectPath,
+            static _ => new SemaphoreSlim(1, 1)
         );
 
-        var framework = SelectFramework(frameworkInfo);
+        await buildLock.WaitAsync(cancellationToken);
+        try
+        {
+            var frameworkInfo = await GetProjectPropertiesAsync(
+                normalizedProjectPath,
+                new[] { "TargetFramework", "TargetFrameworks" },
+                framework: null,
+                cancellationToken
+            );
 
-        await RunDotNetAsync(
-            new[]
-            {
-                "build",
-                projectPath,
-                "-nologo",
-                "-verbosity:minimal",
-                "-p:TargetFramework=" + framework,
-            },
-            cancellationToken
-        );
+            var framework = SelectFramework(frameworkInfo);
 
-        var properties = await GetProjectPropertiesAsync(
-            projectPath,
-            new[] { "TargetPath", "ProjectDir", "AssemblyName" },
-            framework,
-            cancellationToken
-        );
+            await RunDotNetAsync(
+                new[]
+                {
+                    "build",
+                    normalizedProjectPath,
+                    "-nologo",
+                    "-verbosity:minimal",
+                    "-p:TargetFramework=" + framework,
+                },
+                cancellationToken
+            );
 
-        return new ProjectBuildInfo(
-            projectPath,
-            framework,
-            GetRequiredProperty(properties, "TargetPath"),
-            GetRequiredProperty(properties, "ProjectDir"),
-            GetRequiredProperty(properties, "AssemblyName")
-        );
+            var properties = await GetProjectPropertiesAsync(
+                normalizedProjectPath,
+                new[] { "TargetPath", "ProjectDir", "AssemblyName" },
+                framework,
+                cancellationToken
+            );
+
+            return new ProjectBuildInfo(
+                normalizedProjectPath,
+                framework,
+                GetRequiredProperty(properties, "TargetPath"),
+                GetRequiredProperty(properties, "ProjectDir"),
+                GetRequiredProperty(properties, "AssemblyName")
+            );
+        }
+        finally
+        {
+            buildLock.Release();
+        }
     }
 
     private static string SelectFramework(JsonElement properties)
