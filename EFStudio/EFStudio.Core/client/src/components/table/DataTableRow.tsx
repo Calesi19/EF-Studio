@@ -77,7 +77,7 @@ export function DataTableRow({
         return (
           <TableCell
             key={col.name}
-            className={`overflow-hidden border-r border-b border-border px-0 py-0 ${isEditing ? "p-0" : ""}`}
+            className={`overflow-hidden border-r border-b border-border px-0 py-0 ${isPendingEdit ? "bg-amber-500/8 border-l-2 border-l-amber-400/60" : ""} ${isEditing ? "p-0" : ""}`}
           >
             <div className={`flex items-center h-9 ${isEditing ? "px-0" : "px-3"}`}>
               <DataTableCell
@@ -85,7 +85,6 @@ export function DataTableRow({
                 column={col}
                 onJumpToRef={col.isForeignKey && col.foreignKeyTable ? onJumpToRef : undefined}
                 isEditing={isEditing}
-                isPendingEdit={isPendingEdit}
                 isRequiredAndEmpty={isRequiredAndEmpty}
                 onDoubleClick={
                   !readOnly && !col.isPrimaryKey && onCellDoubleClick

@@ -12,7 +12,6 @@ interface DataTableCellProps {
   column: ColumnDef;
   onJumpToRef?: (tableKey: string, value: FieldValue) => void;
   isEditing?: boolean;
-  isPendingEdit?: boolean;
   isRequiredAndEmpty?: boolean;
   onDoubleClick?: () => void;
   onCommitEdit?: (value: FieldValue) => void;
@@ -164,7 +163,6 @@ export function DataTableCell({
   column,
   onJumpToRef,
   isEditing = false,
-  isPendingEdit = false,
   isRequiredAndEmpty = false,
   onDoubleClick,
   onCommitEdit,
@@ -172,17 +170,13 @@ export function DataTableCell({
 }: DataTableCellProps) {
   const canEdit = !!onDoubleClick && !column.isPrimaryKey;
 
-  const pendingClass = isPendingEdit
-    ? "bg-amber-500/5 border-l-2 border-l-amber-400/60"
-    : "";
-
   const requiredEmptyClass = isRequiredAndEmpty
     ? "ring-1 ring-inset ring-amber-400/60"
     : "";
 
   if (isEditing && onCommitEdit && onCancelEdit) {
     return (
-      <div className={`flex items-center h-full w-full ${pendingClass}`}>
+      <div className="flex items-center h-full w-full">
         <EditInput
           value={value}
           column={column}
@@ -246,7 +240,7 @@ export function DataTableCell({
 
   return (
     <div
-      className={`flex items-center h-full w-full ${pendingClass} ${requiredEmptyClass} ${canEdit ? "cursor-default" : ""}`}
+      className={`flex items-center h-full w-full ${requiredEmptyClass} ${canEdit ? "cursor-default" : ""}`}
       onDoubleClick={canEdit ? onDoubleClick : undefined}
     >
       {displayContent}
