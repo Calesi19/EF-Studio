@@ -63,13 +63,9 @@ if (app.Environment.IsDevelopment())
 app.Run();
 ```
 
-Note: the NuGet package name is `EFStudio`, while the current extension-method namespace is `EFStudio.Core.Extensions`.
-
 By default, the studio will be available at `/efstudio` (e.g., `http://localhost:5000/efstudio`).
 
 ## Why EFStudio?
-
-While tools like pgAdmin and Azure Data Studio are powerful, they often require external connections and context switching. **EFStudio** lives inside your project:
 
 1. **Context Aware**: It understands your EF Core relations, navigations, and mapped schemas.
 2. **Minimal Footprint**: No need to manage credentials or connection strings in multiple places; if your API can connect to the DB, the Studio can too.
@@ -83,17 +79,20 @@ While tools like pgAdmin and Azure Data Studio are powerful, they often require 
 - `Npgsql.EntityFrameworkCore.PostgreSQL` for PostgreSQL
 - `Microsoft.EntityFrameworkCore.Sqlite` for SQLite
 
-## Roadmap
+## Database Support
 
-- [ ] Support for complex many-to-many relationship editing.
-- [ ] Raw SQL query console.
-- [ ] Export data to CSV/JSON.
-- [ ] Support for write operations.
-- [ ] Support for other providers (SQL Server).
+| Database | Status |
+| --- | --- |
+| PostgreSQL | ✅ Supported |
+| SQLite | ✅ Supported |
+| SQL Server | 🚧 Coming in the future |
+| MySQL | 🚧 Coming in the future |
+| MariaDB | 🚧 Coming in the future |
+| Oracle Database | 🚧 Coming in the future |
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request or open an issue for any bugs or feature requests.
+See [CONTRIBUTE.md](./CONTRIBUTE.md) for local setup, development workflow, and pull request guidance.
 
 ## License
 
