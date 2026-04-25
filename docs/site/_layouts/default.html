@@ -4,57 +4,40 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>
-      {% if page.title and page.title != site.title %}
-        {{ page.title }} | {{ site.title }}
-      {% else %}
-        {{ site.title }}
-      {% endif %}
+      {% if page.title and page.title != site.title %}{{ page.title }} | {{ site.title }}{% else %}{{ site.title }}{% endif %}
     </title>
-    <meta
-      name="description"
-      content="{{ page.description | default: site.description | escape }}"
-    />
+    <meta name="description" content="{{ page.description | default: site.description | escape }}" />
     <link rel="icon" href="{{ '/assets/images/favicon.ico' | relative_url }}" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="{{ '/assets/css/site.css' | relative_url }}" />
   </head>
   <body>
-    <div class="page-shell">
-      <header class="site-header">
+    <header class="site-header">
+      <div class="header-inner">
         <a class="brand" href="{{ '/' | relative_url }}">
           <img
-            class="brand-mark"
-            src="{{ '/assets/images/favicon.ico' | relative_url }}"
+            class="brand-logo"
+            src="{{ '/assets/images/logo.webp' | relative_url }}"
             alt="EFStudio logo"
-            width="32"
-            height="32"
+            width="28"
+            height="28"
           />
-          <span class="brand-copy">
-            <strong>EFStudio</strong>
-            <span>Visual database studio for EF Core</span>
-          </span>
+          <span class="brand-name">EFStudio</span>
         </a>
         <nav class="site-nav" aria-label="Primary">
-          <a href="{{ '/' | relative_url }}">Overview</a>
-          <a href="{{ '/features/' | relative_url }}">Features</a>
-          <a href="{{ '/installation/' | relative_url }}">Installation</a>
-          <a href="{{ '/usage/' | relative_url }}">Usage</a>
-          <a href="https://github.com/carloslespin/EF-Studio">GitHub</a>
+          <a href="https://github.com/carloslespin/EF-Studio" class="nav-link">GitHub</a>
         </nav>
-      </header>
+      </div>
+    </header>
 
-      <main class="site-main">
-        {{ content }}
-      </main>
+    <main class="site-main">{{ content }}</main>
 
-      <footer class="site-footer">
-        <p>EFStudio is development-only by design. Built for fast local data inspection.</p>
-      </footer>
-    </div>
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <p>EFStudio — development-only by design.</p>
+      </div>
+    </footer>
   </body>
 </html>
