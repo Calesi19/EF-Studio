@@ -3,5 +3,5 @@
 Install with:
 
 ```bash
-dotnet tool install --global EFStudio.Tool
+dotnet tool install --global EFStudio
 ```

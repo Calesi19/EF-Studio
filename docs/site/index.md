@@ -21,7 +21,7 @@ It is designed for local development only. EFStudio starts a local server, opens
 ## Install
 
 <div class="code-copy-block">
-  <pre><code>dotnet tool install --global EFStudio.Tool</code></pre>
+  <pre><code>dotnet tool install --global EFStudio</code></pre>
   <button class="copy-btn" aria-label="Copy to clipboard">Copy</button>
 </div>
 

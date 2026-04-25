@@ -34,7 +34,7 @@
 Install the .NET tool via the .NET CLI:
 
 ```bash
-dotnet tool install --global EFStudio.Tool
+dotnet tool install --global EFStudio
 ```
 
 ## Quick Start
@@ -92,7 +92,7 @@ Pack and install the tool locally for testing:
 
 ```bash
 dotnet pack EFStudio.Tool -c Release
-dotnet tool install --global --add-source ./EFStudio.Tool/bin/Release EFStudio.Tool
+dotnet tool install --global --add-source ./EFStudio.Tool/bin/Release EFStudio
 ```
 
 ## Why EFStudio?

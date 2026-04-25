@@ -19,7 +19,7 @@ permalink: /installation/
   <h2>1. Install the global tool</h2>
 
 ```bash
-dotnet tool install --global EFStudio.Tool
+dotnet tool install --global EFStudio
 ```
 
   <p>
