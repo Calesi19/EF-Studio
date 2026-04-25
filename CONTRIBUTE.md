@@ -32,6 +32,49 @@ Run the sample app:
 dotnet run --project EFStudio.Sample
 ```
 
+### Tool Development
+
+The primary development workflow is now the CLI tool plus the sample project.
+
+From `EFStudio/`, run EFStudio against the sample project:
+
+```bash
+dotnet run --project EFStudio.Tool -- --project ./EFStudio.Sample/EFStudio.Sample.csproj
+```
+
+Useful variations:
+
+```bash
+dotnet run --project EFStudio.Tool -- --project ./EFStudio.Sample/EFStudio.Sample.csproj --no-browser
+dotnet run --project EFStudio.Tool -- --project ./EFStudio.Sample/EFStudio.Sample.csproj --port 5123
+dotnet run --project EFStudio.Tool -- --project ./EFStudio.Sample/EFStudio.Sample.csproj --context AppDbContext
+```
+
+Typical local development loop:
+
+1. Start the sample API if you need to validate the sample project itself:
+
+```bash
+dotnet run --project EFStudio.Sample
+```
+
+2. In a separate terminal, start the local EFStudio tool host:
+
+```bash
+dotnet run --project EFStudio.Tool -- --project ./EFStudio.Sample/EFStudio.Sample.csproj
+```
+
+3. Open the local EFStudio URL printed by the tool if `--no-browser` was used.
+
+If you want to test the packaged tool shape instead of `dotnet run`, build and invoke the tool assembly directly:
+
+```bash
+dotnet build EFStudio.Tool/EFStudio.Tool.csproj
+dotnet EFStudio.Tool/bin/Debug/net10.0/EFStudio.Tool.dll --project ./EFStudio.Sample/EFStudio.Sample.csproj --no-browser
+```
+
+The sample project includes `IDesignTimeDbContextFactory<AppDbContext>` so the tool can discover and create the context without requiring `app.UseEFStudio()`.
+
 ### Frontend
 
 From `EFStudio/EFStudio.Core/client/`:
