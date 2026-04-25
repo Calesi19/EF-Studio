@@ -68,7 +68,7 @@ By default, the studio will be available at `/efstudio` (e.g., `http://localhost
 ## Why EFStudio?
 
 1. **Context Aware**: It understands your EF Core relations, navigations, and mapped schemas.
-2. **Minimal Footprint**: No need to manage credentials or connection strings in multiple places; if your API can connect to the DB, the Studio can too.
+2. **Minimal Footprint**: No need to manage credentials or connection strings in multiple places, and no need to rely on a separate database workbench. If your API can connect to the database, the Studio can too.
 3. **Workflow Integration**: Keep database inspection in the same lifecycle as your API development.
 
 ## Requirements
