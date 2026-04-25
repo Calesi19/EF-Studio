@@ -7,6 +7,9 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/Calesi19/EFStudio/releases">
+    <img src="https://img.shields.io/github/v/release/Calesi19/EFStudio" alt="GitHub Release" />
+  </a>
   <a href="https://github.com/Calesi19/EFStudio/actions/workflows/publish-nuget.yml">
     <img src="https://github.com/Calesi19/EFStudio/actions/workflows/publish-nuget.yml/badge.svg" alt="Publish NuGet Package" />
   </a>
