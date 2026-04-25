@@ -7,6 +7,11 @@
     <AssemblyName>EFStudio.Worker</AssemblyName>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net6.0' Or '$(TargetFramework)' == 'net7.0'">
+    <!-- EFStudio intentionally keeps out-of-support worker TFMs to inspect legacy apps. -->
+    <NoWarn>$(NoWarn);NETSDK1138</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\EFStudio.Core\EFStudio.Core.csproj" />
     <ProjectReference Include="..\EFStudio.Server\EFStudio.Server.csproj" />
