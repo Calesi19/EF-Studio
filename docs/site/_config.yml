@@ -1,6 +1,6 @@
 title: EFStudio
 description: Minimal visual database studio for EF Core apps.
-baseurl: "/EF-Studio"
+baseurl: "/EFStudio"
 url: "https://carloslespin.github.io"
 markdown: kramdown
 kramdown:
