@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using EFStudio.Core.Services;
 using EFStudio.Server;
 
@@ -74,7 +75,7 @@ catch (OperationCanceledException)
 }
 catch (Exception exception)
 {
-    Console.Error.WriteLine(exception.Message);
+    Console.Error.WriteLine(GetErrorMessage(exception));
     return 1;
 }
 
@@ -118,6 +119,15 @@ static void TryOpenBrowser(Uri uri)
     {
         Console.WriteLine($"Open this URL in your browser: {uri}");
     }
+}
+
+static string GetErrorMessage(Exception exception)
+{
+    var effectiveException = exception is TargetInvocationException && exception.InnerException != null
+        ? exception.InnerException
+        : exception.GetBaseException();
+
+    return effectiveException.Message;
 }
 
 internal sealed record ToolOptions(

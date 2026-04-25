@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Reflection;
 using EFStudio.Core.Contracts;
 using EFStudio.Core.Services;
 using Microsoft.AspNetCore.Builder;
@@ -97,7 +98,7 @@ public sealed class StudioServer
                 }
                 catch (Exception exception)
                 {
-                    return Results.BadRequest(new ErrorResponseContract(exception.Message));
+                    return Results.BadRequest(new ErrorResponseContract(GetErrorMessage(exception)));
                 }
             }
         );
@@ -122,7 +123,7 @@ public sealed class StudioServer
                 }
                 catch (Exception exception)
                 {
-                    return Results.BadRequest(new ErrorResponseContract(exception.Message));
+                    return Results.BadRequest(new ErrorResponseContract(GetErrorMessage(exception)));
                 }
             }
         );
@@ -168,7 +169,7 @@ public sealed class StudioServer
                 }
                 catch (Exception exception)
                 {
-                    return Results.BadRequest(new ErrorResponseContract(exception.Message));
+                    return Results.BadRequest(new ErrorResponseContract(GetErrorMessage(exception)));
                 }
             }
         );
@@ -199,5 +200,14 @@ public sealed class StudioServer
     private static int ParseInt(string? value, int fallback)
     {
         return int.TryParse(value, out var parsed) ? parsed : fallback;
+    }
+
+    private static string GetErrorMessage(Exception exception)
+    {
+        var effectiveException = exception is TargetInvocationException && exception.InnerException != null
+            ? exception.InnerException
+            : exception.GetBaseException();
+
+        return effectiveException.Message;
     }
 }

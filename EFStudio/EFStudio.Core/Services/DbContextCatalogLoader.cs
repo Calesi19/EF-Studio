@@ -31,11 +31,14 @@ public sealed class DbContextCatalogLoader
             ? targetProject
             : await BuildProjectAsync(startupProjectPath, cancellationToken);
 
-        var loadContext = new StudioAssemblyLoadContext(startupProject.TargetPath);
-        var startupAssembly = loadContext.LoadFromAssemblyPath(startupProject.TargetPath);
+        var loadContext = AssemblyLoadContext.Default;
+        var dependencyResolver = DefaultContextDependencyResolver.Register(
+            new[] { startupProject.TargetPath, targetProject.TargetPath }
+        );
+        var startupAssembly = LoadAssemblyIntoDefaultContext(startupProject.TargetPath);
         var targetAssembly = string.Equals(startupProject.TargetPath, targetProject.TargetPath, StringComparison.OrdinalIgnoreCase)
             ? startupAssembly
-            : loadContext.LoadFromAssemblyPath(targetProject.TargetPath);
+            : LoadAssemblyIntoDefaultContext(targetProject.TargetPath);
 
         var startupHost = TryCreateStartupHost(startupAssembly, out var startupServices, out var startupError);
         var factoryTypes = GetLoadableTypes(startupAssembly)
@@ -51,7 +54,6 @@ public sealed class DbContextCatalogLoader
 
         if (contextTypes.Count == 0)
         {
-            loadContext.Unload();
             throw new InvalidOperationException(
                 $"EFStudio could not find any DbContext types in '{targetProjectPath}'."
             );
@@ -61,7 +63,7 @@ public sealed class DbContextCatalogLoader
             .Select(contextType => CreateRegistration(contextType, factoryTypes, startupServices, startupError))
             .ToList();
 
-        return new DiscoveredDbContextCatalog(loadContext, startupHost, registrations);
+        return new DiscoveredDbContextCatalog(loadContext, startupHost, dependencyResolver, registrations);
     }
 
     private static DbContextRegistration CreateRegistration(
@@ -234,6 +236,23 @@ public sealed class DbContextCatalogLoader
         {
             return exception.Types.Where(type => type != null).Cast<Type>().ToList();
         }
+    }
+
+    private static Assembly LoadAssemblyIntoDefaultContext(string assemblyPath)
+    {
+        var fullPath = Path.GetFullPath(assemblyPath);
+        var existingAssembly = AssemblyLoadContext.Default
+            .Assemblies
+            .FirstOrDefault(assembly =>
+                string.Equals(assembly.Location, fullPath, StringComparison.OrdinalIgnoreCase)
+            );
+
+        if (existingAssembly != null)
+        {
+            return existingAssembly;
+        }
+
+        return AssemblyLoadContext.Default.LoadFromAssemblyPath(fullPath);
     }
 
     private static bool IsDbContextType(Type type)
@@ -471,50 +490,26 @@ public sealed class DbContextCatalogLoader
         string AssemblyName
     );
 
-    private sealed class StudioAssemblyLoadContext : AssemblyLoadContext
-    {
-        private readonly AssemblyDependencyResolver _resolver;
-
-        public StudioAssemblyLoadContext(string mainAssemblyPath)
-            : base(nameof(StudioAssemblyLoadContext), isCollectible: true)
-        {
-            _resolver = new AssemblyDependencyResolver(mainAssemblyPath);
-        }
-
-        protected override Assembly? Load(AssemblyName assemblyName)
-        {
-            var sharedAssembly = AppDomain.CurrentDomain
-                .GetAssemblies()
-                .FirstOrDefault(assembly =>
-                    string.Equals(assembly.GetName().Name, assemblyName.Name, StringComparison.Ordinal)
-                );
-
-            if (sharedAssembly != null)
-            {
-                return sharedAssembly;
-            }
-
-            var path = _resolver.ResolveAssemblyToPath(assemblyName);
-            return path == null ? null : LoadFromAssemblyPath(path);
-        }
-    }
 }
 
 public sealed class DiscoveredDbContextCatalog : IDbContextCatalog, IDisposable, IAsyncDisposable
 {
     private readonly AssemblyLoadContext _loadContext;
     private readonly object? _startupHost;
+    private readonly IDisposable? _dependencyResolver;
     private readonly IReadOnlyList<DbContextRegistration> _registrations;
     private string? _selectedContextName;
 
     internal DiscoveredDbContextCatalog(
         AssemblyLoadContext loadContext,
         object? startupHost,
+        IDisposable? dependencyResolver,
         IReadOnlyList<DbContextRegistration> registrations
     )
     {
         _loadContext = loadContext;
         _startupHost = startupHost;
+        _dependencyResolver = dependencyResolver;
         _registrations = registrations;
 
         var availableContexts = registrations.Where(registration => registration.ActivationError == null).ToList();
@@ -596,7 +591,12 @@ public sealed class DiscoveredDbContextCatalog : IDbContextCatalog, IDisposable,
             disposable.Dispose();
         }
 
-        _loadContext.Unload();
+        _dependencyResolver?.Dispose();
+
+        if (!ReferenceEquals(_loadContext, AssemblyLoadContext.Default))
+        {
+            _loadContext.Unload();
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -610,7 +610,12 @@ public sealed class DiscoveredDbContextCatalog : IDbContextCatalog, IDisposable,
             disposable.Dispose();
         }
 
-        _loadContext.Unload();
+        _dependencyResolver?.Dispose();
+
+        if (!ReferenceEquals(_loadContext, AssemblyLoadContext.Default))
+        {
+            _loadContext.Unload();
+        }
     }
 }
 
@@ -621,3 +626,59 @@ internal sealed record DbContextRegistration(
     Func<DbContextLease>? Activator,
     string? ActivationError
 );
+
+internal sealed class DefaultContextDependencyResolver : IDisposable
+{
+    private readonly IReadOnlyList<AssemblyDependencyResolver> _resolvers;
+    private readonly Func<AssemblyLoadContext, AssemblyName, Assembly?> _handler;
+
+    private DefaultContextDependencyResolver(IReadOnlyList<AssemblyDependencyResolver> resolvers)
+    {
+        _resolvers = resolvers;
+        _handler = Resolve;
+        AssemblyLoadContext.Default.Resolving += _handler;
+    }
+
+    public static DefaultContextDependencyResolver Register(IReadOnlyList<string> assemblyPaths)
+    {
+        var resolvers = assemblyPaths
+            .Select(Path.GetFullPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(path => new AssemblyDependencyResolver(path))
+            .ToList();
+
+        return new DefaultContextDependencyResolver(resolvers);
+    }
+
+    public void Dispose()
+    {
+        AssemblyLoadContext.Default.Resolving -= _handler;
+    }
+
+    private Assembly? Resolve(AssemblyLoadContext context, AssemblyName assemblyName)
+    {
+        foreach (var resolver in _resolvers)
+        {
+            var assemblyPath = resolver.ResolveAssemblyToPath(assemblyName);
+            if (assemblyPath == null)
+            {
+                continue;
+            }
+
+            var existingAssembly = AssemblyLoadContext.Default
+                .Assemblies
+                .FirstOrDefault(assembly =>
+                    string.Equals(assembly.Location, assemblyPath, StringComparison.OrdinalIgnoreCase)
+                );
+
+            if (existingAssembly != null)
+            {
+                return existingAssembly;
+            }
+
+            return context.LoadFromAssemblyPath(assemblyPath);
+        }
+
+        return null;
+    }
+}
