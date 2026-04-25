@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { EFSTUDIO_API_BASE } from "@/api/constants";
 import type { FieldValue } from "@/types";
 
@@ -47,14 +47,5 @@ export async function updateRecords(request: UpdateRecordsRequest): Promise<Upda
 }
 
 export function useUpdateRecords() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: updateRecords,
-    onSuccess: async (response) => {
-      await queryClient.invalidateQueries({
-        queryKey: ["table-data", response.tableKey],
-      });
-    },
-  });
+  return useMutation({ mutationFn: updateRecords });
 }

@@ -2,7 +2,7 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { useDbContexts, useSelectDbContext } from "@/api/contexts/fetchDbContexts";
-import { tableDataQueryOptions } from "@/api/data/fetchTableData";
+import { tableDataQueryOptions, type TablePageData } from "@/api/data/fetchTableData";
 import { useDeleteRecords } from "@/api/data/deleteRecords";
 import { useUpdateRecords } from "@/api/data/updateRecords";
 import { useSchema } from "@/api/schema/fetchSchema";
@@ -395,6 +395,22 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
         tableKey: activeTab.tableKey,
         updates,
       });
+
+      queryClient.setQueriesData<TablePageData>(
+        { queryKey: ["table-data", selectedContextName, activeTab.tableKey] },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            rows: old.rows.map((row) => {
+              const rowPk = serializeRowPk(row, pkColumns);
+              const edits = pendingEdits.get(rowPk);
+              return edits ? { ...row, ...edits } : row;
+            }),
+          };
+        },
+      );
+
       setPendingEdits(new Map());
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to save changes.";
