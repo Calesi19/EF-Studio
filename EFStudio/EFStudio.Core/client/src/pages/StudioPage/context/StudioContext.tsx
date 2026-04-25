@@ -48,7 +48,7 @@ type StudioContextType = {
   deletingRows: boolean;
   deleteRows: (rows: RecordRow[]) => Promise<void>;
   pendingEdits: PendingEdits;
-  hasPendingEdits: boolean;
+  pendingEditCount: number;
   savingEdits: boolean;
   activeTableUpdateError: string | null;
   setCellEdit: (row: RecordRow, columnName: string, value: FieldValue) => void;
@@ -153,7 +153,7 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
   const activeTableLoading = activeTableQuery?.isLoading ?? false;
   const activeTableDeleteError = activeTab ? (tableDeleteErrors[activeTab.tableKey] ?? null) : null;
   const deletingRows = deleteRecordsMutation.isPending;
-  const hasPendingEdits = pendingEdits.size > 0;
+  const pendingEditCount = pendingEdits.size;
   const savingEdits = updateRecordsMutation.isPending;
   const activeTableUpdateError = activeTab ? (tableUpdateErrors[activeTab.tableKey] ?? null) : null;
 
@@ -472,7 +472,7 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
         deletingRows,
         deleteRows,
         pendingEdits,
-        hasPendingEdits,
+        pendingEditCount,
         savingEdits,
         activeTableUpdateError,
         setCellEdit,

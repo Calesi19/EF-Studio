@@ -16,7 +16,6 @@ export function StudioWorkspace() {
     deleteRows,
     deleteSelectionResetKey,
     pendingEdits,
-    hasPendingEdits,
     savingEdits,
     setCellEdit,
     saveEdits,
@@ -49,7 +48,7 @@ export function StudioWorkspace() {
       onBulkDelete={deleteRows}
       onJumpToRef={jumpToReference}
       pendingEdits={pendingEdits}
-      hasPendingEdits={hasPendingEdits}
+      pendingEditCount={pendingEdits.size}
       savingEdits={savingEdits}
       onCellEdit={setCellEdit}
       onSaveEdits={saveEdits}

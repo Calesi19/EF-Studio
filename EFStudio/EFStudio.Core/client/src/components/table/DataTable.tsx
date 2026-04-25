@@ -49,7 +49,7 @@ interface DataTableProps {
   onJumpToRef: (tableKey: string, value: FieldValue) => void;
   readOnly?: boolean;
   pendingEdits?: PendingEdits;
-  hasPendingEdits?: boolean;
+  pendingEditCount?: number;
   savingEdits?: boolean;
   onCellEdit?: (row: RecordRow, columnName: string, value: FieldValue) => void;
   onSaveEdits?: () => void;
@@ -77,7 +77,7 @@ export function DataTable({
   onJumpToRef,
   readOnly = false,
   pendingEdits,
-  hasPendingEdits = false,
+  pendingEditCount = 0,
   savingEdits = false,
   onCellEdit,
   onSaveEdits,
@@ -223,7 +223,7 @@ export function DataTable({
         selectedCount={selectedKeys.size}
         onBulkDelete={() => setBulkDeleteOpen(true)}
         readOnly={readOnly}
-        hasPendingEdits={hasPendingEdits}
+        pendingEditCount={pendingEditCount}
         savingEdits={savingEdits}
         onSaveEdits={onSaveEdits}
         onDiscardEdits={onDiscardEdits}

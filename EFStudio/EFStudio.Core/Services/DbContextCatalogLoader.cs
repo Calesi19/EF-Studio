@@ -174,6 +174,7 @@ public sealed class DbContextCatalogLoader
                         services = host.Services;
                         return host;
                     }
+#pragma warning disable ASPDEPR008
                     case IWebHostBuilder webHostBuilder:
                     {
                         var webHost = webHostBuilder.Build();
@@ -186,6 +187,7 @@ public sealed class DbContextCatalogLoader
                     case IWebHost webHost:
                         services = webHost.Services;
                         return webHost;
+#pragma warning restore ASPDEPR008
                 }
             }
             catch (Exception exception)
