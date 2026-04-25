@@ -1,3 +1,6 @@
+## [ Frontend Build Output ]
+**/wwwroot/
+
 ## [ Build Artifacts ]
 bin/
 obj/
