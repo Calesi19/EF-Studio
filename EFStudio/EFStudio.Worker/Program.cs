@@ -59,12 +59,11 @@ try
         cancellationTokenSource.Token
     );
 
-    PrintStartupBanner(handle.BaseUri, handle.StudioUri, options.NoBrowser);
+    var browserStatus = options.NoBrowser
+        ? "disabled (--no-browser)"
+        : TryOpenBrowser(handle.StudioUri);
 
-    if (!options.NoBrowser)
-    {
-        TryOpenBrowser(handle.StudioUri);
-    }
+    PrintStartupBanner(handle.BaseUri, handle.StudioUri, browserStatus);
 
     await handle.WaitForShutdownAsync(cancellationTokenSource.Token);
     return 0;
@@ -116,29 +115,122 @@ static bool CanBind(int port)
     }
 }
 
-static void TryOpenBrowser(Uri uri)
+static string TryOpenBrowser(Uri uri)
 {
+    if (OperatingSystem.IsLinux() && !HasLinuxDesktopSession())
+    {
+        return "not opened automatically (no desktop browser available)";
+    }
+
     try
     {
-        Process.Start(new ProcessStartInfo
+        var startInfo = CreateBrowserStartInfo(uri);
+        if (startInfo == null)
         {
-            FileName = uri.ToString(),
-            UseShellExecute = true,
-        });
+            return "not opened automatically (unsupported environment)";
+        }
+
+        Process.Start(startInfo);
+        return "opening automatically";
     }
     catch
     {
+        return "not opened automatically (open the URL manually)";
     }
 }
 
-static void PrintStartupBanner(Uri baseUri, Uri studioUri, bool noBrowser)
+static ProcessStartInfo? CreateBrowserStartInfo(Uri uri)
+{
+    if (OperatingSystem.IsWindows())
+    {
+        return new ProcessStartInfo
+        {
+            FileName = uri.ToString(),
+            UseShellExecute = true,
+        };
+    }
+
+    if (OperatingSystem.IsMacOS())
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "open",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        startInfo.ArgumentList.Add(uri.ToString());
+        return startInfo;
+    }
+
+    if (OperatingSystem.IsLinux())
+    {
+        var browserLauncher = FindLinuxBrowserLauncher();
+        if (browserLauncher == null)
+        {
+            return null;
+        }
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = browserLauncher,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        startInfo.ArgumentList.Add(uri.ToString());
+        return startInfo;
+    }
+
+    return null;
+}
+
+static bool HasLinuxDesktopSession()
+{
+    return !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DISPLAY"))
+        || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"));
+}
+
+static string? FindLinuxBrowserLauncher()
+{
+    foreach (var candidate in new[] { "xdg-open", "gio", "gnome-open", "kde-open" })
+    {
+        if (CommandExists(candidate))
+        {
+            return candidate;
+        }
+    }
+
+    return null;
+}
+
+static bool CommandExists(string command)
+{
+    var pathValue = Environment.GetEnvironmentVariable("PATH");
+    if (string.IsNullOrWhiteSpace(pathValue))
+    {
+        return false;
+    }
+
+    foreach (var directory in pathValue.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+    {
+        var candidate = Path.Combine(directory, command);
+        if (File.Exists(candidate))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+static void PrintStartupBanner(Uri baseUri, Uri studioUri, string browserStatus)
 {
     var lines = new[]
     {
         "EFStudio is ready",
         $"Host: {baseUri}",
         $"UI:   {studioUri}",
-        noBrowser ? "Browser: disabled (--no-browser)" : "Browser: opening automatically",
+        $"Browser: {browserStatus}",
     };
 
     var contentWidth = lines.Max(static line => line.Length);
