@@ -1,13 +1,9 @@
 using System.Text.Json;
 using EFStudio.Core.Contracts;
-using EFStudio.Core.Extensions;
 using EFStudio.Core.Services;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using EFStudio.Server;
 
 public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFixture<PostgresTestDatabase>
 {
@@ -85,7 +81,7 @@ public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFix
     }
 
     [Fact]
-    public async Task Middleware_ShouldReturnSchemaQualifiedPayloads_ForPostgres()
+    public async Task Server_ShouldReturnSchemaQualifiedPayloads_ForPostgres()
     {
         if (!database.IsAvailable())
         {
@@ -97,26 +93,11 @@ public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFix
         database.Context.CrmUsers.Add(new CrmUser { Id = 9, Name = "Katherine Johnson" });
         await database.Context.SaveChangesAsync();
 
-        using var host = await new HostBuilder()
-            .ConfigureWebHost(webBuilder =>
-            {
-                webBuilder
-                    .UseTestServer()
-                    .UseEnvironment("Development")
-                    .ConfigureServices(services =>
-                    {
-                        services.AddDbContext<PostgresTestDbContext>(options =>
-                            options.UseNpgsql(database.ConnectionString));
-                        services.AddEFStudio<PostgresTestDbContext>();
-                    })
-                    .Configure(app => app.UseEFStudio());
-            })
-            .StartAsync();
+        await using var handle = await StartServerAsync();
+        using var client = new HttpClient();
 
-        var client = host.GetTestServer().CreateClient();
-
-        var schemaResponse = await client.GetAsync("/efstudio/api/schema");
-        var dataResponse = await client.GetAsync("/efstudio/api/data?table=crm.Users");
+        var schemaResponse = await client.GetAsync(new Uri(handle.StudioUri, "api/schema"));
+        var dataResponse = await client.GetAsync(new Uri(handle.StudioUri, "api/data?table=crm.Users"));
 
         schemaResponse.EnsureSuccessStatusCode();
         dataResponse.EnsureSuccessStatusCode();
@@ -125,7 +106,7 @@ public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFix
         var tables = JsonSerializer.Deserialize<List<ApiSchemaTable>>(schemaPayload, JsonOptions);
 
         var dataPayload = await dataResponse.Content.ReadAsStringAsync();
-        var tableData = JsonSerializer.Deserialize<ApiTableDataResponse>(dataPayload, JsonOptions);
+        var tableData = JsonSerializer.Deserialize<ApiTablePageResponse>(dataPayload, JsonOptions);
 
         Assert.NotNull(tables);
         Assert.Contains(tables, table => table.Key == "crm.Users" && table.Schema == "crm");
@@ -133,6 +114,8 @@ public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFix
         Assert.NotNull(tableData);
         Assert.Equal("crm.Users", tableData.Key);
         Assert.Equal("crm", tableData.Schema);
+        Assert.Equal(1, tableData.Page);
+        Assert.Equal(1, tableData.TotalRows);
         Assert.Equal(
             "Katherine Johnson",
             GetJsonValue(tableData.Rows.Single(), "name", "Name").GetString()
@@ -177,7 +160,7 @@ public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFix
     }
 
     [Fact]
-    public async Task Middleware_ShouldSerializeEveryUniquePostgresColumnType()
+    public async Task Server_ShouldSerializeEveryUniquePostgresColumnType()
     {
         if (!database.IsAvailable())
         {
@@ -189,29 +172,14 @@ public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFix
         database.Context.PostgresTypeCoverageRecords.Add(CreateCoverageRecord());
         await database.Context.SaveChangesAsync();
 
-        using var host = await new HostBuilder()
-            .ConfigureWebHost(webBuilder =>
-            {
-                webBuilder
-                    .UseTestServer()
-                    .UseEnvironment("Development")
-                    .ConfigureServices(services =>
-                    {
-                        services.AddDbContext<PostgresTestDbContext>(options =>
-                            options.UseNpgsql(database.ConnectionString));
-                        services.AddEFStudio<PostgresTestDbContext>();
-                    })
-                    .Configure(app => app.UseEFStudio());
-            })
-            .StartAsync();
-
-        var client = host.GetTestServer().CreateClient();
-        var response = await client.GetAsync($"/efstudio/api/data?table={CoverageTableKey}");
+        await using var handle = await StartServerAsync();
+        using var client = new HttpClient();
+        var response = await client.GetAsync(new Uri(handle.StudioUri, $"api/data?table={CoverageTableKey}"));
 
         response.EnsureSuccessStatusCode();
 
         var payload = await response.Content.ReadAsStringAsync();
-        var tableData = JsonSerializer.Deserialize<ApiTableDataResponse>(payload, JsonOptions);
+        var tableData = JsonSerializer.Deserialize<ApiTablePageResponse>(payload, JsonOptions);
 
         Assert.NotNull(tableData);
         var row = tableData.Rows.Single();
@@ -372,12 +340,44 @@ public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFix
         );
     }
 
+    private Task<StudioServerHandle> StartServerAsync()
+    {
+        var port = GetAvailablePort();
+        var server = new StudioServer();
+        var catalog = TestDbContextCatalog.CreateSingle(
+            nameof(PostgresTestDbContext),
+            () =>
+            {
+                var options = new DbContextOptionsBuilder<PostgresTestDbContext>()
+                    .UseNpgsql(database.ConnectionString)
+                    .Options;
+                return new PostgresTestDbContext(options);
+            }
+        );
+
+        return server.StartAsync(
+            new StudioServerOptions($"http://127.0.0.1:{port}"),
+            catalog,
+            CancellationToken.None
+        );
+    }
+
+    private static int GetAvailablePort()
+    {
+        using var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        listener.Start();
+        return ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+    }
+
     private sealed record ApiSchemaTable(string Key, string Name, string? Schema);
 
-    private sealed record ApiTableDataResponse(
+    private sealed record ApiTablePageResponse(
         string Key,
         string Name,
         string? Schema,
+        int Page,
+        int PageSize,
+        int TotalRows,
         List<Dictionary<string, JsonElement>> Rows
     );
 }

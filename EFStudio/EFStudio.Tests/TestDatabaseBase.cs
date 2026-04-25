@@ -4,15 +4,15 @@ using Microsoft.EntityFrameworkCore;
 
 public abstract class TestDatabaseBase : IDisposable
 {
-    private readonly SqliteConnection _connection;
+    protected SqliteConnection Connection { get; }
     protected readonly TestDbContext Context;
 
     protected TestDatabaseBase()
     {
-        _connection = new SqliteConnection("Filename=:memory:");
-        _connection.Open();
+        Connection = new SqliteConnection("Filename=:memory:");
+        Connection.Open();
 
-        var options = new DbContextOptionsBuilder<TestDbContext>().UseSqlite(_connection).Options;
+        var options = new DbContextOptionsBuilder<TestDbContext>().UseSqlite(Connection).Options;
 
         Context = new TestDbContext(options);
         Context.Database.EnsureCreated();
@@ -21,7 +21,7 @@ public abstract class TestDatabaseBase : IDisposable
     public void Dispose()
     {
         Context.Dispose();
-        _connection.Dispose();
+        Connection.Dispose();
     }
 }
 

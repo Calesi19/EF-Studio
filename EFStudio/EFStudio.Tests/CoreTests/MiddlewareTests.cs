@@ -1,109 +1,77 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
-using System.Net.Http.Json;
-using EFStudio.Core.Extensions;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.TestHost;
+using EFStudio.Server;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Xunit;
 
-public class MiddlewareTests
+public class StudioServerApiTests : TestDatabaseBase
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     [Fact]
-    public async Task Middleware_ShouldReturnJsonOnSchemaEndpoint()
+    public async Task Server_ShouldReturnContextsEndpoint()
     {
-        // 1. Create a SQLite connection that stays open for the duration of the test
-        using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Filename=:memory:");
-        connection.Open();
+        await using var handle = await StartServerAsync();
+        using var client = new HttpClient();
 
-        using var host = await new HostBuilder()
-            .ConfigureWebHost(webBuilder =>
-            {
-                webBuilder
-                    .UseTestServer()
-                    .UseEnvironment("Development")
-                    .ConfigureServices(services =>
-                    {
-                        // 2. Use SQLite instead of the InMemory provider
-                        services.AddDbContext<TestDbContext>(opt => opt.UseSqlite(connection));
-                        services.AddEFStudio<TestDbContext>();
-                    })
-                    .Configure(app =>
-                    {
-                        // Ensure the schema is created in our in-memory SQLite
-                        using (var scope = app.ApplicationServices.CreateScope())
-                        {
-                            var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
-                            db.Database.EnsureCreated();
-                        }
-
-                        app.UseEFStudio();
-                    });
-            })
-            .StartAsync();
-
-        var client = host.GetTestServer().CreateClient();
-
-        // Act
-        var response = await client.GetAsync("/efstudio/api/schema");
-
-        // Assert
-        response.EnsureSuccessStatusCode();
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Users", content);
-    }
-
-    [Fact]
-    public async Task Middleware_ShouldReturnBogusUserDataOnDataEndpoint()
-    {
-        using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Filename=:memory:");
-        connection.Open();
-
-        var fakeUsers = TestDataFactory.CreateUsers(5);
-
-        using var host = await new HostBuilder()
-            .ConfigureWebHost(webBuilder =>
-            {
-                webBuilder
-                    .UseTestServer()
-                    .UseEnvironment("Development")
-                    .ConfigureServices(services =>
-                    {
-                        services.AddDbContext<TestDbContext>(opt => opt.UseSqlite(connection));
-                        services.AddEFStudio<TestDbContext>();
-                    })
-                    .Configure(app =>
-                    {
-                        using (var scope = app.ApplicationServices.CreateScope())
-                        {
-                            var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
-                            db.Database.EnsureCreated();
-                            db.Users.AddRange(fakeUsers);
-                            db.SaveChanges();
-                        }
-
-                        app.UseEFStudio();
-                    });
-            })
-            .StartAsync();
-
-        var client = host.GetTestServer().CreateClient();
-
-        var response = await client.GetAsync("/efstudio/api/data?table=Users");
+        var response = await client.GetAsync(new Uri(handle.StudioUri, "api/contexts"));
 
         response.EnsureSuccessStatusCode();
 
         var payload = await response.Content.ReadAsStringAsync();
-        var dataResponse = JsonSerializer.Deserialize<TableDataResponse>(payload, JsonOptions);
+        var contextsResponse = JsonSerializer.Deserialize<DbContextsResponse>(payload, JsonOptions);
+
+        Assert.NotNull(contextsResponse);
+        Assert.Equal("TestDbContext", contextsResponse.SelectedContextName);
+        Assert.Contains(
+            contextsResponse.Contexts,
+            context => context.Name == "TestDbContext" && context.IsSelected && context.IsDefault
+        );
+    }
+
+    [Fact]
+    public async Task Server_ShouldReturnJsonOnSchemaEndpoint()
+    {
+        await using var handle = await StartServerAsync();
+        using var client = new HttpClient();
+
+        var response = await client.GetAsync(new Uri(handle.StudioUri, "api/schema"));
+
+        response.EnsureSuccessStatusCode();
+
+        var payload = await response.Content.ReadAsStringAsync();
+        var tables = JsonSerializer.Deserialize<List<SchemaTableResponse>>(payload, JsonOptions);
+
+        Assert.NotNull(tables);
+        var usersTable = tables.Single(table => table.Key == "Users");
+        Assert.Equal("Users", usersTable.Name);
+        Assert.Null(usersTable.Schema);
+    }
+
+    [Fact]
+    public async Task Server_ShouldReturnPagedUserDataOnDataEndpoint()
+    {
+        var fakeUsers = TestDataFactory.CreateUsers(5);
+        Context.Users.AddRange(fakeUsers);
+        await Context.SaveChangesAsync();
+
+        await using var handle = await StartServerAsync();
+        using var client = new HttpClient();
+
+        var response = await client.GetAsync(new Uri(handle.StudioUri, "api/data?table=Users&page=1&pageSize=2"));
+
+        response.EnsureSuccessStatusCode();
+
+        var payload = await response.Content.ReadAsStringAsync();
+        var dataResponse = JsonSerializer.Deserialize<TablePageResponse>(payload, JsonOptions);
 
         Assert.NotNull(dataResponse);
         Assert.Equal("Users", dataResponse.Key);
         Assert.Equal("Users", dataResponse.Name);
-        Assert.Equal(fakeUsers.Count, dataResponse.Rows.Count);
+        Assert.Equal(1, dataResponse.Page);
+        Assert.Equal(2, dataResponse.PageSize);
+        Assert.Equal(fakeUsers.Count, dataResponse.TotalRows);
+        Assert.Equal(2, dataResponse.Rows.Count);
 
         var expectedUser = fakeUsers[0];
         var row = dataResponse.Rows.Single(item => GetJsonValue(item, "id", "Id").GetInt32() == expectedUser.Id);
@@ -113,150 +81,77 @@ public class MiddlewareTests
     }
 
     [Fact]
-    public async Task Middleware_ShouldDeleteSelectedRecords()
+    public async Task Server_ShouldReturnNotFoundForUnknownTable()
     {
-        using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Filename=:memory:");
-        connection.Open();
+        await using var handle = await StartServerAsync();
+        using var client = new HttpClient();
 
-        var fakeUsers = TestDataFactory.CreateUsers(3);
+        var response = await client.GetAsync(new Uri(handle.StudioUri, "api/data?table=MissingTable"));
 
-        using var host = await new HostBuilder()
-            .ConfigureWebHost(webBuilder =>
-            {
-                webBuilder
-                    .UseTestServer()
-                    .UseEnvironment("Development")
-                    .ConfigureServices(services =>
-                    {
-                        services.AddDbContext<TestDbContext>(opt => opt.UseSqlite(connection));
-                        services.AddEFStudio<TestDbContext>();
-                    })
-                    .Configure(app =>
-                    {
-                        using (var scope = app.ApplicationServices.CreateScope())
-                        {
-                            var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
-                            db.Database.EnsureCreated();
-                            db.Users.AddRange(fakeUsers);
-                            db.SaveChanges();
-                        }
-
-                        app.UseEFStudio();
-                    });
-            })
-            .StartAsync();
-
-        var client = host.GetTestServer().CreateClient();
-        var request = new
-        {
-            tableKey = "Users",
-            keys = new[]
-            {
-                new Dictionary<string, object> { ["Id"] = fakeUsers[0].Id },
-                new Dictionary<string, object> { ["Id"] = fakeUsers[1].Id },
-            },
-        };
-
-        using var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, "/efstudio/api/data")
-        {
-            Content = JsonContent.Create(request),
-        };
-
-        var response = await client.SendAsync(deleteRequest);
-
-        response.EnsureSuccessStatusCode();
-
-        var payload = await response.Content.ReadAsStringAsync();
-        var deleteResponse = JsonSerializer.Deserialize<DeleteRecordsResponse>(payload, JsonOptions);
-
-        Assert.NotNull(deleteResponse);
-        Assert.Equal("Users", deleteResponse.TableKey);
-        Assert.Equal(2, deleteResponse.DeletedCount);
-
-        var remainingResponse = await client.GetAsync("/efstudio/api/data?table=Users");
-        remainingResponse.EnsureSuccessStatusCode();
-
-        var remainingPayload = await remainingResponse.Content.ReadAsStringAsync();
-        var remainingData = JsonSerializer.Deserialize<TableDataResponse>(remainingPayload, JsonOptions);
-
-        Assert.NotNull(remainingData);
-        Assert.Single(remainingData.Rows);
-    }
-
-    [Fact]
-    public async Task Middleware_ShouldReturnConflictWhenDeleteViolatesForeignKeys()
-    {
-        using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Filename=:memory:");
-        connection.Open();
-
-        var fakeUser = TestDataFactory.CreateUsers(1).Single();
-
-        using var host = await new HostBuilder()
-            .ConfigureWebHost(webBuilder =>
-            {
-                webBuilder
-                    .UseTestServer()
-                    .UseEnvironment("Development")
-                    .ConfigureServices(services =>
-                    {
-                        services.AddDbContext<TestDbContext>(opt => opt.UseSqlite(connection));
-                        services.AddEFStudio<TestDbContext>();
-                    })
-                    .Configure(app =>
-                    {
-                        using (var scope = app.ApplicationServices.CreateScope())
-                        {
-                            var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
-                            db.Database.EnsureCreated();
-                            db.Users.Add(fakeUser);
-                            db.UserNotes.Add(new TestUserNote
-                            {
-                                Id = 1,
-                                UserId = fakeUser.Id,
-                                Body = "Still referenced",
-                            });
-                            db.SaveChanges();
-                        }
-
-                        app.UseEFStudio();
-                    });
-            })
-            .StartAsync();
-
-        var client = host.GetTestServer().CreateClient();
-        var request = new
-        {
-            tableKey = "Users",
-            keys = new[]
-            {
-                new Dictionary<string, object> { ["Id"] = fakeUser.Id },
-            },
-        };
-
-        using var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, "/efstudio/api/data")
-        {
-            Content = JsonContent.Create(request),
-        };
-
-        var response = await client.SendAsync(deleteRequest);
-
-        Assert.Equal(System.Net.HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
 
         var payload = await response.Content.ReadAsStringAsync();
         var error = JsonSerializer.Deserialize<ErrorResponse>(payload, JsonOptions);
 
         Assert.NotNull(error);
-        Assert.Contains("still referenced by related data", error.Message);
+        Assert.Contains("MissingTable", error.Message);
     }
 
-    private sealed record TableDataResponse(
+    private Task<StudioServerHandle> StartServerAsync()
+    {
+        var port = GetAvailablePort();
+        var server = new StudioServer();
+        var catalog = TestDbContextCatalog.CreateSingle(
+            "TestDbContext",
+            () =>
+            {
+                var options = new DbContextOptionsBuilder<TestDbContext>()
+                    .UseSqlite(Connection)
+                    .Options;
+                return new TestDbContext(options);
+            }
+        );
+
+        return server.StartAsync(
+            new StudioServerOptions($"http://127.0.0.1:{port}"),
+            catalog,
+            CancellationToken.None
+        );
+    }
+
+    private static int GetAvailablePort()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        return ((IPEndPoint)listener.LocalEndpoint).Port;
+    }
+
+    private sealed record DbContextsResponse(
+        List<DbContextResponse> Contexts,
+        string? SelectedContextName
+    );
+
+    private sealed record DbContextResponse(
+        string Name,
+        bool IsSelected,
+        bool IsDefault
+    );
+
+    private sealed record SchemaTableResponse(
+        string Key,
+        string Name,
+        string? Schema
+    );
+
+    private sealed record TablePageResponse(
         string Key,
         string Name,
         string? Schema,
+        int Page,
+        int PageSize,
+        int TotalRows,
         List<Dictionary<string, JsonElement>> Rows
     );
-
-    private sealed record DeleteRecordsResponse(string TableKey, int DeletedCount);
 
     private sealed record ErrorResponse(string Message);
 
