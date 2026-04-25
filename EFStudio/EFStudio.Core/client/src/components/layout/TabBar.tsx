@@ -29,6 +29,14 @@ export function TabBar({ tabs, activeTabId, tables, onActivate, onClose, onClose
           <HugeiconsIcon icon={SidebarLeft01Icon} size={14} />
         </button>
       )}
+      {tabs.length >= 2 && (
+        <button
+          onClick={onCloseAll}
+          className="flex h-9 shrink-0 items-center border-r border-border px-3 text-xs font-normal text-muted-foreground transition-colors select-none hover:bg-muted/50 hover:text-foreground"
+        >
+          Close all
+        </button>
+      )}
       <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex min-w-max">
           {tabs.map((tab) => {
@@ -63,14 +71,6 @@ export function TabBar({ tabs, activeTabId, tables, onActivate, onClose, onClose
               </div>
             );
           })}
-          {tabs.length >= 2 && (
-            <button
-              onClick={onCloseAll}
-              className="flex h-9 shrink-0 items-center gap-1 border-r border-border px-3 text-xs font-normal text-muted-foreground transition-colors select-none hover:bg-muted/50 hover:text-foreground"
-            >
-              Close all
-            </button>
-          )}
         </div>
       </div>
     </div>

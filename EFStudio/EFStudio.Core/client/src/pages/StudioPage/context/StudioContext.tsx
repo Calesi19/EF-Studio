@@ -3,8 +3,9 @@ import { createContext, type ReactNode, useContext, useEffect, useState } from "
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { useDbContexts, useSelectDbContext } from "@/api/contexts/fetchDbContexts";
 import { tableDataQueryOptions } from "@/api/data/fetchTableData";
+import { useDeleteRecords } from "@/api/data/deleteRecords";
 import { useSchema } from "@/api/schema/fetchSchema";
-import type { DbContextDef, FieldValue, SortState, TableDef, TabState } from "@/types";
+import type { DbContextDef, FieldValue, RecordRow, SortState, TableDef, TabState } from "@/types";
 import { DEFAULT_PAGE_NUMBER, DEFAULT_PAGE_SIZE, DEFAULT_SORT } from "@/pages/StudioPage/constants";
 import { useSettings, type NameDisplay } from "@/hooks/useSettings";
 
@@ -41,6 +42,10 @@ type StudioContextType = {
   changeFilter: (filter: string) => void;
   nameDisplay: NameDisplay;
   setNameDisplay: (value: NameDisplay) => void;
+  deleteSelectionResetKey: number;
+  activeTableDeleteError: string | null;
+  deletingRows: boolean;
+  deleteRows: (rows: RecordRow[]) => Promise<void>;
 };
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -66,8 +71,12 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
     return Number.isFinite(parsed) ? parsed : DEFAULT_PAGE_SIZE;
   });
 
+  const [tableDeleteErrors, setTableDeleteErrors] = useState<Record<string, string>>({});
+  const [deleteSelectionResetKey, setDeleteSelectionResetKey] = useState(0);
+
   const { data: contexts = [], isLoading: isContextsLoading, error: contextsError } = useDbContexts();
   const selectDbContextMutation = useSelectDbContext();
+  const deleteRecordsMutation = useDeleteRecords();
 
   useEffect(() => {
     if (selectedContextName) {
@@ -131,6 +140,8 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
   const effectiveSidebarOpen = tabs.length === 0 ? true : sidebarOpen;
   const activeTableError = activeTableQuery?.error ? toErrorMessage(activeTableQuery.error) : null;
   const activeTableLoading = activeTableQuery?.isLoading ?? false;
+  const activeTableDeleteError = activeTab ? (tableDeleteErrors[activeTab.tableKey] ?? null) : null;
+  const deletingRows = deleteRecordsMutation.isPending;
 
   function createTab(tableKey: string, filter = ""): TabState {
     return {
@@ -269,6 +280,39 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
     );
   }
 
+  async function deleteRows(rows: RecordRow[]) {
+    if (!activeTab || !selectedTable) {
+      return;
+    }
+
+    const primaryKeyColumns = selectedTable.columns.filter((column) => column.isPrimaryKey);
+    if (primaryKeyColumns.length === 0) {
+      const message = `The table '${selectedTable.name}' does not support delete operations because it has no primary key.`;
+      setTableDeleteErrors((current) => ({ ...current, [activeTab.tableKey]: message }));
+      throw new Error(message);
+    }
+
+    setTableDeleteErrors((current) => {
+      const next = { ...current };
+      delete next[activeTab.tableKey];
+      return next;
+    });
+
+    try {
+      await deleteRecordsMutation.mutateAsync({
+        tableKey: activeTab.tableKey,
+        keys: rows.map((row) =>
+          Object.fromEntries(primaryKeyColumns.map((column) => [column.name, row[column.name] ?? null])),
+        ),
+      });
+      setDeleteSelectionResetKey((current) => current + 1);
+    } catch (error) {
+      const message = toErrorMessage(error);
+      setTableDeleteErrors((current) => ({ ...current, [activeTab.tableKey]: message }));
+      throw error;
+    }
+  }
+
   function changeFilter(filter: string) {
     if (!activeTab) {
       return;
@@ -313,6 +357,10 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
         changeFilter,
         nameDisplay,
         setNameDisplay,
+        deleteSelectionResetKey,
+        activeTableDeleteError,
+        deletingRows,
+        deleteRows,
       }}
     >
       {children}

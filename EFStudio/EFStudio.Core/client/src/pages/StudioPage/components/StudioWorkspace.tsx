@@ -13,6 +13,8 @@ export function StudioWorkspace() {
     changePage,
     changePageSize,
     changeSort,
+    deleteRows,
+    deleteSelectionResetKey,
   } = useStudioContext();
 
   if (!activeTab || !selectedTable) {
@@ -35,11 +37,11 @@ export function StudioWorkspace() {
       onPageSizeChange={changePageSize}
       onAddRecord={() => {}}
       canAddRecord={false}
+      selectionResetKey={deleteSelectionResetKey}
       onEditRecord={() => {}}
       onDeleteRecord={() => {}}
-      onBulkDelete={() => {}}
+      onBulkDelete={deleteRows}
       onJumpToRef={jumpToReference}
-      readOnly
     />
   );
 }
