@@ -81,13 +81,13 @@ By default, the studio will be available at `/efstudio` (e.g., `http://localhost
 
 ## Database Support
 
-| Database | Status |
-| --- | --- |
-| PostgreSQL | ✅ Supported |
-| SQLite | ✅ Supported |
-| SQL Server | 🚧 Coming in the future |
-| MySQL | 🚧 Coming in the future |
-| MariaDB | 🚧 Coming in the future |
+| Database        | Status                  |
+| --------------- | ----------------------- |
+| PostgreSQL      | ✅ Supported            |
+| SQLite          | ✅ Supported            |
+| SQL Server      | 🚧 Coming in the future |
+| MySQL           | 🚧 Coming in the future |
+| MariaDB         | 🚧 Coming in the future |
 | Oracle Database | 🚧 Coming in the future |
 
 ## Contributing
