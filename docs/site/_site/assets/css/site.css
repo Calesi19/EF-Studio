@@ -13,6 +13,11 @@
 /* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; }
 
+html,
+body {
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
   font-family: "Figtree", system-ui, sans-serif;

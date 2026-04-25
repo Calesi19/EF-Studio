@@ -25,6 +25,7 @@ public class MiddlewareTests
             {
                 webBuilder
                     .UseTestServer()
+                    .UseEnvironment("Development")
                     .ConfigureServices(services =>
                     {
                         // 2. Use SQLite instead of the InMemory provider
@@ -69,6 +70,7 @@ public class MiddlewareTests
             {
                 webBuilder
                     .UseTestServer()
+                    .UseEnvironment("Development")
                     .ConfigureServices(services =>
                     {
                         services.AddDbContext<TestDbContext>(opt => opt.UseSqlite(connection));
@@ -123,6 +125,7 @@ public class MiddlewareTests
             {
                 webBuilder
                     .UseTestServer()
+                    .UseEnvironment("Development")
                     .ConfigureServices(services =>
                     {
                         services.AddDbContext<TestDbContext>(opt => opt.UseSqlite(connection));
@@ -193,6 +196,7 @@ public class MiddlewareTests
             {
                 webBuilder
                     .UseTestServer()
+                    .UseEnvironment("Development")
                     .ConfigureServices(services =>
                     {
                         services.AddDbContext<TestDbContext>(opt => opt.UseSqlite(connection));

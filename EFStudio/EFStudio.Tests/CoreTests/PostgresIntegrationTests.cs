@@ -102,6 +102,7 @@ public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFix
             {
                 webBuilder
                     .UseTestServer()
+                    .UseEnvironment("Development")
                     .ConfigureServices(services =>
                     {
                         services.AddDbContext<PostgresTestDbContext>(options =>
@@ -193,6 +194,7 @@ public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFix
             {
                 webBuilder
                     .UseTestServer()
+                    .UseEnvironment("Development")
                     .ConfigureServices(services =>
                     {
                         services.AddDbContext<PostgresTestDbContext>(options =>

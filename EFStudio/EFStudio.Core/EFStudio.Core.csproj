@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <PackageId>EFStudio</PackageId>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <IsDevelopmentDependency>true</IsDevelopmentDependency>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net6.0'">
