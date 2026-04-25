@@ -33,7 +33,6 @@ export function DataTableSkeleton({ columns, pageSize }: DataTableSkeletonProps)
         <Input
           placeholder="Filter records..."
           value=""
-          disabled
           className="h-7 w-56 text-xs"
         />
         <Skeleton className="h-7 w-24" />

@@ -4,7 +4,6 @@ import { Sidebar } from "@/components/sidebar/Sidebar";
 import { useStudioContext } from "@/pages/StudioPage/context/StudioContext";
 import { StudioStatus } from "@/pages/StudioPage/components/StudioStatus";
 import { StudioWorkspace } from "@/pages/StudioPage/components/StudioWorkspace";
-import { DataTableSkeleton } from "@/components/table/DataTableSkeleton";
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
@@ -14,7 +13,6 @@ export function StudioContent() {
     activeTab,
     activeTabId,
     activeTableError,
-    activeTableLoading,
     activeTableUpdateError,
     closeAllTabs,
     closeTab,
@@ -105,11 +103,6 @@ export function StudioContent() {
                 <StudioStatus
                   title={`Failed to load ${nameDisplay === "model" ? selectedTable.modelDisplayName : selectedTable.name}`}
                   message={activeTableError}
-                />
-              ) : activeTableLoading ? (
-                <DataTableSkeleton
-                  columns={selectedTable.columns}
-                  pageSize={activeTab.pagination.pageSize}
                 />
               ) : (
                 <StudioWorkspace />

@@ -150,7 +150,10 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
   const currentTotalPages = activeTableQuery?.data?.totalPages ?? 1;
   const effectiveSidebarOpen = tabs.length === 0 ? true : sidebarOpen;
   const activeTableError = activeTableQuery?.error ? toErrorMessage(activeTableQuery.error) : null;
-  const activeTableLoading = activeTableQuery?.isLoading ?? false;
+  const activeTableLoading =
+    activeTableQuery != null
+      ? activeTableQuery.isLoading && activeTableQuery.data === undefined
+      : false;
   const activeTableDeleteError = activeTab ? (tableDeleteErrors[activeTab.tableKey] ?? null) : null;
   const deletingRows = deleteRecordsMutation.isPending;
   const pendingEditCount = pendingEdits.size;
