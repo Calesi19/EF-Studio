@@ -1,12 +1,12 @@
 ---
 layout: default
 title: EFStudio
-description: A Prisma Studio-style visual database editor for .NET and ASP.NET Core apps.
+description: A visual database editor for .NET and ASP.NET Core apps.
 ---
 
 # EFStudio
 
-<p class="tagline">A Prisma Studio-style visual database editor for .NET and ASP.NET Core.</p>
+<p class="tagline">A visual database editor for .NET and ASP.NET Core.</p>
 
 EFStudio embeds a visual table browser directly into your ASP.NET Core app. Point it at your existing `DbContext`, start the app, and inspect your data at `/efstudio` — no separate database client needed.
 

@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  Prisma Studio-style database browsing for EF Core apps.
+  Visual database browsing for EF Core apps.
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
   </a>
 </p>
 
-**EFStudio** is a minimal, plug-and-play visual database browser for EF Core apps. Heavily inspired by Prisma Studio, it lets you inspect schema and records directly from your browser with a single line of configuration in your ASP.NET Core application.
+**EFStudio** is a minimal, plug-and-play visual database browser for EF Core apps. It lets you inspect schema and records directly from your browser with a single line of configuration in your ASP.NET Core application.
 
 ![EFStudio Screenshot](./docs/banner.webp)
 
