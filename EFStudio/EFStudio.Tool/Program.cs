@@ -59,8 +59,7 @@ try
         cancellationTokenSource.Token
     );
 
-    Console.WriteLine($"EFStudio is hosted at {handle.BaseUri}");
-    Console.WriteLine($"Studio UI: {handle.StudioUri}");
+    PrintStartupBanner(handle.BaseUri, handle.StudioUri, options.NoBrowser);
 
     if (!options.NoBrowser)
     {
@@ -120,6 +119,94 @@ static void TryOpenBrowser(Uri uri)
     {
         Console.WriteLine($"Open this URL in your browser: {uri}");
     }
+}
+
+static void PrintStartupBanner(Uri baseUri, Uri studioUri, bool noBrowser)
+{
+    var lines = new[]
+    {
+        "EFStudio is ready",
+        $"Host: {baseUri}",
+        $"UI:   {studioUri}",
+        noBrowser ? "Browser: disabled (--no-browser)" : "Browser: opening automatically",
+    };
+
+    var contentWidth = lines.Max(static line => line.Length);
+    var border = $"+-{new string('-', contentWidth)}-+";
+
+    WriteBannerLine(border, ConsoleColor.DarkCyan);
+
+    for (var index = 0; index < lines.Length; index++)
+    {
+        var line = lines[index];
+        if (index == 0)
+        {
+            WriteBannerContent(line, contentWidth, ConsoleColor.Green);
+            continue;
+        }
+
+        var labelWidth = line.IndexOf(':');
+        if (labelWidth <= 0)
+        {
+            WriteBannerContent(line, contentWidth, ConsoleColor.Gray);
+            continue;
+        }
+
+        WriteBannerKeyValueContent(
+            line[..labelWidth],
+            line[(labelWidth + 1)..].TrimStart(),
+            contentWidth,
+            ConsoleColor.Cyan,
+            ConsoleColor.White
+        );
+    }
+
+    WriteBannerLine(border, ConsoleColor.DarkCyan);
+}
+
+static void WriteBannerLine(string text, ConsoleColor color)
+{
+    var previousColor = Console.ForegroundColor;
+    Console.ForegroundColor = color;
+    Console.WriteLine(text);
+    Console.ForegroundColor = previousColor;
+}
+
+static void WriteBannerContent(string text, int contentWidth, ConsoleColor color)
+{
+    var previousColor = Console.ForegroundColor;
+    Console.ForegroundColor = ConsoleColor.DarkCyan;
+    Console.Write("| ");
+    Console.ForegroundColor = color;
+    Console.Write(text.PadRight(contentWidth));
+    Console.ForegroundColor = ConsoleColor.DarkCyan;
+    Console.WriteLine(" |");
+    Console.ForegroundColor = previousColor;
+}
+
+static void WriteBannerKeyValueContent(
+    string label,
+    string value,
+    int contentWidth,
+    ConsoleColor labelColor,
+    ConsoleColor valueColor)
+{
+    var previousColor = Console.ForegroundColor;
+    var content = $"{label}: {value}";
+    var padding = new string(' ', contentWidth - content.Length);
+
+    Console.ForegroundColor = ConsoleColor.DarkCyan;
+    Console.Write("| ");
+    Console.ForegroundColor = labelColor;
+    Console.Write(label);
+    Console.ForegroundColor = ConsoleColor.Gray;
+    Console.Write(": ");
+    Console.ForegroundColor = valueColor;
+    Console.Write(value);
+    Console.Write(padding);
+    Console.ForegroundColor = ConsoleColor.DarkCyan;
+    Console.WriteLine(" |");
+    Console.ForegroundColor = previousColor;
 }
 
 static string GetErrorMessage(Exception exception)
