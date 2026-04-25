@@ -60,16 +60,41 @@ public sealed class DbContextCatalogLoader
                 .Distinct()
                 .ToList();
 
-            var contextTypes = GetLoadableTypes(targetAssembly)
+            var (targetTypes, targetLoaderExceptions) = GetLoadableTypesWithDiagnostics(targetAssembly);
+
+            var contextTypes = targetTypes
                 .Where(type => type is { IsAbstract: false } && IsDbContextType(type))
                 .OrderBy(type => type.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
             if (contextTypes.Count == 0)
             {
-                throw new InvalidOperationException(
-                    $"EFStudio could not find any DbContext types in '{targetProjectPath}'."
-                );
+                var builder = new StringBuilder();
+                builder.Append($"EFStudio could not find any DbContext types in '{targetProjectPath}'.");
+
+                if (targetLoaderExceptions.Count > 0)
+                {
+                    builder.Append(" Some types failed to load — this is often caused by a missing or version-conflicting assembly dependency. Loader errors:");
+                    foreach (var loaderException in targetLoaderExceptions.Take(5))
+                    {
+                        builder.Append($" [{loaderException.GetType().Name}: {loaderException.Message}]");
+                    }
+
+                    if (targetLoaderExceptions.Count > 5)
+                    {
+                        builder.Append($" ... and {targetLoaderExceptions.Count - 5} more.");
+                    }
+                }
+                else if (targetTypes.Count == 0)
+                {
+                    builder.Append(" The assembly appears to contain no loadable types. Verify the project builds successfully with 'dotnet build'.");
+                }
+                else
+                {
+                    builder.Append($" Found {targetTypes.Count} type(s) in the assembly but none inherit from DbContext.");
+                }
+
+                throw new InvalidOperationException(builder.ToString());
             }
 
             var registrations = contextTypes
@@ -266,13 +291,20 @@ public sealed class DbContextCatalogLoader
 
     private static IReadOnlyList<Type> GetLoadableTypes(Assembly assembly)
     {
+        return GetLoadableTypesWithDiagnostics(assembly).Types;
+    }
+
+    private static (IReadOnlyList<Type> Types, IReadOnlyList<Exception> LoaderExceptions) GetLoadableTypesWithDiagnostics(Assembly assembly)
+    {
         try
         {
-            return assembly.GetTypes();
+            return (assembly.GetTypes(), Array.Empty<Exception>());
         }
         catch (ReflectionTypeLoadException exception)
         {
-            return exception.Types.Where(type => type != null).Cast<Type>().ToList();
+            var types = exception.Types.Where(type => type != null).Cast<Type>().ToList();
+            var loaderExceptions = exception.LoaderExceptions.Where(e => e != null).Cast<Exception>().ToList();
+            return (types, loaderExceptions);
         }
     }
 
@@ -803,6 +835,21 @@ internal sealed class DefaultContextDependencyResolver : IDisposable
 
     private Assembly? Resolve(AssemblyLoadContext context, AssemblyName assemblyName)
     {
+        // If an assembly with the same name is already loaded (possibly at a different version),
+        // return it rather than loading a conflicting copy. Attempting to load a second version
+        // of the same assembly into the Default context causes ReflectionTypeLoadException that
+        // silently hides DbContext types from discovery.
+        var existingByName = AssemblyLoadContext.Default
+            .Assemblies
+            .FirstOrDefault(assembly =>
+                string.Equals(assembly.GetName().Name, assemblyName.Name, StringComparison.OrdinalIgnoreCase)
+            );
+
+        if (existingByName != null)
+        {
+            return existingByName;
+        }
+
         foreach (var resolver in _resolvers)
         {
             var assemblyPath = resolver.ResolveAssemblyToPath(assemblyName);
