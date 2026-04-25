@@ -22,7 +22,7 @@ public class StudioServerApiTests : TestDatabaseBase
         var contextsResponse = JsonSerializer.Deserialize<DbContextsResponse>(payload, JsonOptions);
 
         Assert.NotNull(contextsResponse);
-        Assert.Equal("TestDbContext", contextsResponse.SelectedContextName);
+        Assert.Equal("TestDbContext", contextsResponse.SelectedContext);
         Assert.Contains(
             contextsResponse.Contexts,
             context => context.Name == "TestDbContext" && context.IsSelected && context.IsDefault
@@ -128,7 +128,7 @@ public class StudioServerApiTests : TestDatabaseBase
 
     private sealed record DbContextsResponse(
         List<DbContextResponse> Contexts,
-        string? SelectedContextName
+        string? SelectedContext
     );
 
     private sealed record DbContextResponse(
