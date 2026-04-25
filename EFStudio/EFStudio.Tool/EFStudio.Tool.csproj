@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>efstudio</ToolCommandName>
-    <PackageId>EFStudio.Tool</PackageId>
+    <PackageId>EFStudio</PackageId>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
