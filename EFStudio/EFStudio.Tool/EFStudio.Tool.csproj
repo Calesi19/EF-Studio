@@ -23,7 +23,7 @@
     <WorkerTargetFramework Include="net10.0" />
   </ItemGroup>
 
-  <Target Name="BuildEFStudioWorkers" BeforeTargets="Build;Pack">
+  <Target Name="BuildEFStudioWorkers" BeforeTargets="Build;Pack" Condition="'$(NoBuild)' != 'true'">
     <MSBuild
       Projects="..\EFStudio.Worker\EFStudio.Worker.csproj"
       Targets="Restore"
@@ -34,7 +34,7 @@
       Properties="Configuration=$(Configuration);TargetFramework=%(WorkerTargetFramework.Identity)" />
   </Target>
 
-  <Target Name="CopyEFStudioWorkers" AfterTargets="Build">
+  <Target Name="CopyEFStudioWorkers" AfterTargets="Build" Condition="'$(NoBuild)' != 'true'">
     <ItemGroup>
       <WorkerOutputNet6 Include="..\EFStudio.Worker\bin\$(Configuration)\net6.0\**\*" />
       <WorkerOutputNet7 Include="..\EFStudio.Worker\bin\$(Configuration)\net7.0\**\*" />
