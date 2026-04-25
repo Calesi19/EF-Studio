@@ -18,14 +18,14 @@
   </a>
 </p>
 
-**EFStudio** is a local browser-based workbench for EF Core apps. Install it as a .NET tool, run `dotnet efstudio` inside your project directory, and it discovers your `DbContext` types without requiring middleware in your app.
+**EFStudio** is a local browser-based workbench for EF Core apps. Install it as a .NET global tool, run `dotnet efstudio` inside your project directory, and it discovers your `DbContext` types without modifying your application startup.
 
 ![EFStudio Screenshot](./docs/banner.webp)
 
 ## Features
 
 - **Auto-Discovery**: Finds your target project, builds it, discovers `DbContext` types, and supports multiple contexts.
-- **Zero Middleware**: No `app.UseEFStudio()` integration is required for the tool path.
+- **Zero App Integration**: No package registration or middleware wiring is required.
 - **Read-Only Browsing**: View schema and paged records through a local embedded UI.
 - **Local-Only Server**: Hosts the workbench on `localhost` and opens it in your browser.
 
@@ -45,6 +45,8 @@ Run EFStudio from inside the project that contains your EF Core setup:
 dotnet efstudio
 ```
 
+EFStudio builds the project, discovers available `DbContext` types, starts a local server, and opens the studio in your browser at `/efstudio`.
+
 Optional arguments:
 
 ```bash
@@ -56,6 +58,14 @@ dotnet efstudio --no-browser
 ```
 
 EFStudio prefers `IDesignTimeDbContextFactory<TContext>` when creating a context. If no design-time factory exists, it will try to create the startup project's service provider by using a conventional startup builder method such as `CreateHostBuilder`. If neither path works, EFStudio returns a clear error telling you to add `IDesignTimeDbContextFactory<TContext>` or provide more startup configuration.
+
+## Typical Workflow
+
+1. Open a terminal in the project directory that contains your EF Core app.
+2. Run `dotnet efstudio`.
+3. Let EFStudio discover your available `DbContext` types.
+4. Use the browser UI to inspect schema and browse records locally.
+5. Stop the tool when you are done.
 
 ## Local Development
 
@@ -85,8 +95,6 @@ dotnet pack EFStudio.Tool -c Release
 dotnet tool install --global --add-source ./EFStudio.Tool/bin/Release EFStudio.Tool
 ```
 
-The repo keeps the existing middleware package code as a legacy integration path, but the CLI tool is now the primary startup model.
-
 ## Why EFStudio?
 
 1. **Context Aware**: It understands your EF Core relations, navigations, and mapped schemas.
@@ -95,9 +103,10 @@ The repo keeps the existing middleware package code as a legacy integration path
 
 ## Requirements
 
-- .NET 6.0 or higher
+- .NET SDK 10.0 or higher to install and run the global tool
 - Entity Framework Core 6.0+
-- EF Core provider for your database
+- A buildable .NET project that can create your target `DbContext`
+- An EF Core provider for your database
 - `Npgsql.EntityFrameworkCore.PostgreSQL` for PostgreSQL
 - `Microsoft.EntityFrameworkCore.Sqlite` for SQLite
 

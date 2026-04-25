@@ -11,7 +11,8 @@ permalink: /features/
   <p>
     EFStudio focuses on the parts of database inspection that matter most during
     application development: fast access to schema structure, record browsing,
-    and an interface that feels native to the app instead of bolted on.
+    and a workflow that stays close to your project instead of requiring app
+    integration.
   </p>
 </section>
 
@@ -19,15 +20,15 @@ permalink: /features/
   <article class="info-card">
     <h3>Auto-discovery</h3>
     <p>
-      EFStudio maps your EF Core model and exposes table information without a
-      separate schema definition step.
+      EFStudio finds your target project, builds it, and exposes available
+      <code>DbContext</code> types without a separate schema definition step.
     </p>
   </article>
   <article class="info-card">
-    <h3>Embedded workflow</h3>
+    <h3>Zero app wiring</h3>
     <p>
-      The studio lives inside the ASP.NET Core app and is available through a
-      predictable route in development.
+      Install the tool once and run it when needed. No package registration,
+      service setup, or middleware changes are required in your application.
     </p>
   </article>
   <article class="info-card">
@@ -38,10 +39,10 @@ permalink: /features/
     </p>
   </article>
   <article class="info-card">
-    <h3>Low setup cost</h3>
+    <h3>Local-only hosting</h3>
     <p>
-      Package install, service registration, middleware. That is the entire
-      integration surface for a typical app.
+      EFStudio hosts the studio on localhost, opens your browser automatically,
+      and keeps the inspection surface local to your machine.
     </p>
   </article>
 </section>
@@ -65,7 +66,7 @@ permalink: /features/
     <tbody>
       <tr>
         <td>Checking seed data</td>
-        <td>Open the studio and inspect records without leaving the app context.</td>
+        <td>Run the tool and inspect records directly against the project's EF Core setup.</td>
       </tr>
       <tr>
         <td>Validating mappings</td>
@@ -73,11 +74,11 @@ permalink: /features/
       </tr>
       <tr>
         <td>Debugging local environments</td>
-        <td>Verify data state quickly during API or UI development.</td>
+        <td>Verify data state quickly during API or UI development without an external admin client.</td>
       </tr>
       <tr>
         <td>Team onboarding</td>
-        <td>Give developers a visual way to understand the data model in a new project.</td>
+        <td>Give developers a visual way to understand the data model in a new project with one CLI command.</td>
       </tr>
     </tbody>
   </table>

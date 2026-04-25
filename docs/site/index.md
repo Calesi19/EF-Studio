@@ -1,16 +1,16 @@
 ---
 layout: default
 title: EFStudio
-description: A visual database editor for .NET and ASP.NET Core apps.
+description: A visual database studio for EF Core projects.
 ---
 
 # EFStudio
 
-<p class="tagline">A visual database editor for .NET and ASP.NET Core.</p>
+<p class="tagline">A visual database studio for EF Core projects.</p>
 
-EFStudio embeds a visual table browser directly into your ASP.NET Core app. Point it at your existing `DbContext`, start the app, and inspect your data at `/efstudio` — no separate database client needed.
+EFStudio runs as a `.NET global tool`. Point it at a project that contains your EF Core setup, let it discover your `DbContext`, and inspect your data in a local browser UI without wiring anything into `Program.cs`.
 
-It is designed for development only. The middleware is intentionally guarded so it never runs in production.
+It is designed for local development only. EFStudio starts a local server, opens the studio in your browser, and keeps the inspection workflow outside your application startup path.
 
 <img
   class="banner"
@@ -21,34 +21,26 @@ It is designed for development only. The middleware is intentionally guarded so 
 ## Install
 
 <div class="code-copy-block">
-  <pre><code>dotnet add package EFStudio</code></pre>
+  <pre><code>dotnet tool install --global EFStudio.Tool</code></pre>
   <button class="copy-btn" aria-label="Copy to clipboard">Copy</button>
 </div>
 
-## Wire it up
+## Run it
 
-Add the service and middleware in `Program.cs`:
+From the project directory that contains your EF Core app:
 
-```csharp
-using EFStudio.Core.Extensions;
-using Microsoft.EntityFrameworkCore;
-
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
-);
-
-builder.Services.AddEFStudio<AppDbContext>();
-
-var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseEFStudio();
-}
-
-app.Run();
+```bash
+dotnet efstudio
 ```
 
-<p class="note">EFStudio is served at <code>/efstudio</code> by default — for example, <code>http://localhost:5000/efstudio</code>.</p>
+<p class="note">EFStudio hosts a local studio at <code>/efstudio</code> on a localhost URL such as <code>http://127.0.0.1:5123/efstudio</code>.</p>
+
+## Common options
+
+```bash
+dotnet efstudio --project ./SomeProject.csproj
+dotnet efstudio --startup-project ./SomeApi.csproj
+dotnet efstudio --context AppDbContext
+dotnet efstudio --port 5123
+dotnet efstudio --no-browser
+```

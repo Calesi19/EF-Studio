@@ -1,71 +1,83 @@
 ---
 layout: default
 title: Installation
-description: Install and configure EFStudio in an ASP.NET Core app.
+description: Install EFStudio as a dotnet global tool and point it at your EF Core project.
 permalink: /installation/
 ---
 
 <section class="page-intro panel">
   <span class="eyebrow">Installation</span>
-  <h1>Install the package and register the middleware.</h1>
+  <h1>Install the tool and run it against your project.</h1>
   <p>
-    EFStudio is designed to fit into an existing ASP.NET Core application with
-    minimal setup. It reuses the app’s EF Core configuration rather than asking
-    you to define a second database connection.
+    EFStudio is delivered as a dotnet global tool. It reuses your project's EF
+    Core configuration and design-time setup rather than asking you to register
+    middleware or duplicate database settings.
   </p>
 </section>
 
 <section class="section panel" markdown="1">
-  <h2>1. Add the package</h2>
+  <h2>1. Install the global tool</h2>
 
 ```bash
-dotnet add package EFStudio
+dotnet tool install --global EFStudio.Tool
 ```
 
   <p>
-    The package name is <code>EFStudio</code>. The current extension method
-    namespace in the repo is <code>EFStudio.Core.Extensions</code>.
+    Once installed, the command is <code>dotnet efstudio</code>.
   </p>
 </section>
 
 <section class="section panel" markdown="1">
-  <h2>2. Register EFStudio with your <code>DbContext</code></h2>
+  <h2>2. Run EFStudio from your project directory</h2>
 
-```csharp
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
-);
-
-builder.Services.AddEFStudio<AppDbContext>();
+```bash
+dotnet efstudio
 ```
 
   <div class="callout">
-    EFStudio expects your application to already be configured with a working EF
-    Core provider.
+    EFStudio expects a buildable .NET project with a working EF Core provider
+    and a way to create the target <code>DbContext</code>.
   </div>
 </section>
 
 <section class="section panel" markdown="1">
-  <h2>3. Expose the studio in development</h2>
+  <h2>3. Target a specific project when needed</h2>
 
-```csharp
-if (app.Environment.IsDevelopment())
-{
-    app.UseEFStudio();
-}
+```bash
+dotnet efstudio --project ./MyDataProject.csproj
+dotnet efstudio --startup-project ./MyApi.csproj
+dotnet efstudio --context AppDbContext
 ```
 
   <p>
-    The middleware is intentionally intended for development environments only.
-    Keep that guard in place.
+    Use <code>--project</code> when the current directory is not the project you
+    want to inspect, <code>--startup-project</code> when the app startup lives in
+    a different project, and <code>--context</code> to preselect a specific
+    <code>DbContext</code>.
+  </p>
+</section>
+
+<section class="section panel" markdown="1">
+  <h2>4. Browser behavior</h2>
+
+```bash
+dotnet efstudio --port 5123
+dotnet efstudio --no-browser
+```
+
+  <p>
+    EFStudio binds to a localhost port, opens the browser by default, and hosts
+    the studio at <code>/efstudio</code>. Use <code>--no-browser</code> if you
+    want to copy the URL manually.
   </p>
 </section>
 
 <section class="section panel" markdown="1">
   <h2>Requirements</h2>
   <ul>
-    <li>.NET 6.0 or higher</li>
+    <li>.NET SDK 10.0 or higher</li>
     <li>Entity Framework Core 6.0+</li>
+    <li>A buildable .NET project that can create your target <code>DbContext</code></li>
     <li>An EF Core provider for your database</li>
     <li><code>Npgsql.EntityFrameworkCore.PostgreSQL</code> for PostgreSQL</li>
     <li><code>Microsoft.EntityFrameworkCore.Sqlite</code> for SQLite</li>
