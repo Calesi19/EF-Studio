@@ -7,6 +7,7 @@ interface DataTableToolbarProps {
   filter: string;
   onFilterChange: (value: string) => void;
   onAddRecord: () => void;
+  canAddRecord?: boolean;
   selectedCount: number;
   onBulkDelete: () => void;
   readOnly?: boolean;
@@ -16,6 +17,7 @@ export function DataTableToolbar({
   filter,
   onFilterChange,
   onAddRecord,
+  canAddRecord = true,
   selectedCount,
   onBulkDelete,
   readOnly = false,
@@ -59,7 +61,7 @@ export function DataTableToolbar({
           </div>
         )}
       </div>
-      {!readOnly && (
+      {!readOnly && canAddRecord && (
         <Button size="sm" onClick={onAddRecord} className="h-7 text-xs gap-1">
           <span>+</span>
           Add record

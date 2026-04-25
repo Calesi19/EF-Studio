@@ -43,35 +43,70 @@ public class EFStudioMiddleware
 
             if (path.Equals(DataPath, StringComparison.OrdinalIgnoreCase))
             {
-                var tableKey = context.Request.Query["table"].ToString();
-                if (string.IsNullOrEmpty(tableKey))
+                if (HttpMethods.IsGet(context.Request.Method))
                 {
-                    await WriteErrorAsync(
-                        context,
-                        StatusCodes.Status400BadRequest,
-                        "Choose a table before requesting table data."
+                    var tableKey = context.Request.Query["table"].ToString();
+                    if (string.IsNullOrEmpty(tableKey))
+                    {
+                        await WriteErrorAsync(
+                            context,
+                            StatusCodes.Status400BadRequest,
+                            "Choose a table before requesting table data."
+                        );
+                        return;
+                    }
+
+                    var request = new TableDataRequestContract(tableKey);
+                    var data = await dataService.GetTableDataAsync(
+                        dbContext,
+                        request,
+                        context.RequestAborted
                     );
+
+                    if (data == null)
+                    {
+                        await WriteErrorAsync(
+                            context,
+                            StatusCodes.Status404NotFound,
+                            $"The table '{tableKey}' could not be found."
+                        );
+                        return;
+                    }
+
+                    await WriteJsonAsync(context, StatusCodes.Status200OK, data);
                     return;
                 }
 
-                var request = new TableDataRequestContract(tableKey);
-                var data = await dataService.GetTableDataAsync(
-                    dbContext,
-                    request,
-                    context.RequestAborted
-                );
-
-                if (data == null)
+                if (HttpMethods.IsDelete(context.Request.Method))
                 {
-                    await WriteErrorAsync(
-                        context,
-                        StatusCodes.Status404NotFound,
-                        $"The table '{tableKey}' could not be found."
+                    var request = await JsonSerializer.DeserializeAsync<DeleteRecordsRequestContract>(
+                        context.Request.Body,
+                        JsonOptions,
+                        context.RequestAborted
                     );
+
+                    if (request == null)
+                    {
+                        await WriteErrorAsync(
+                            context,
+                            StatusCodes.Status400BadRequest,
+                            "Provide a delete request before deleting records."
+                        );
+                        return;
+                    }
+
+                    var result = await dataService.DeleteRecordsAsync(
+                        dbContext,
+                        request,
+                        context.RequestAborted
+                    );
+
+                    await WriteJsonAsync(context, StatusCodes.Status200OK, result);
                     return;
                 }
 
-                await WriteJsonAsync(context, StatusCodes.Status200OK, data);
+                context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+                context.Response.Headers.Allow = $"{HttpMethods.Get}, {HttpMethods.Delete}";
                 return;
             }
 
@@ -82,6 +117,23 @@ public class EFStudioMiddleware
             }
 
             await _next(context);
+        }
+        catch (EFStudioRequestException exception) when (
+            path.Equals(DataPath, StringComparison.OrdinalIgnoreCase)
+        )
+        {
+            await WriteErrorAsync(context, exception.StatusCode, exception.Message);
+        }
+        catch (JsonException) when (
+            path.Equals(DataPath, StringComparison.OrdinalIgnoreCase) &&
+            HttpMethods.IsDelete(context.Request.Method)
+        )
+        {
+            await WriteErrorAsync(
+                context,
+                StatusCodes.Status400BadRequest,
+                "Provide a valid delete request before deleting records."
+            );
         }
         catch (Exception exception) when (
             path.Equals(SchemaPath, StringComparison.OrdinalIgnoreCase) ||

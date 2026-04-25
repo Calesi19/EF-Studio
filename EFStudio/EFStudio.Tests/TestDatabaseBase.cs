@@ -29,6 +29,19 @@ public abstract class TestDatabaseBase : IDisposable
 public class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options)
 {
     public DbSet<TestUser> Users => Set<TestUser>();
+    public DbSet<TestUserNote> UserNotes => Set<TestUserNote>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<TestUserNote>(entity =>
+        {
+            entity.HasKey(note => note.Id);
+            entity.HasOne(note => note.User)
+                .WithMany()
+                .HasForeignKey(note => note.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+    }
 }
 
 public class TestUser
@@ -39,6 +52,14 @@ public class TestUser
     public bool IsActive { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public decimal CreditLimit { get; set; }
+}
+
+public class TestUserNote
+{
+    public int Id { get; set; }
+    public int UserId { get; set; }
+    public string Body { get; set; } = "";
+    public TestUser User { get; set; } = null!;
 }
 
 public static class TestDataFactory

@@ -239,6 +239,84 @@ public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFix
         Assert.Equal(CoverageUuid.ToString(), GetJsonValue(row, "uuidValue", "UuidValue").GetString());
     }
 
+    [Fact]
+    public async Task DataService_ShouldDeleteRowsForQualifiedPostgresTableKey()
+    {
+        if (!database.IsAvailable())
+        {
+            return;
+        }
+
+        await ResetDatabaseAsync();
+
+        database.Context.CrmUsers.AddRange(
+            new CrmUser { Id = 21, Name = "Delete One" },
+            new CrmUser { Id = 22, Name = "Delete Two" },
+            new CrmUser { Id = 23, Name = "Keep Three" }
+        );
+        await database.Context.SaveChangesAsync();
+
+        var service = new DataService(NullLogger<DataService>.Instance);
+
+        var result = await service.DeleteRecordsAsync(
+            database.Context,
+            new DeleteRecordsRequestContract(
+                "crm.Users",
+                [
+                    CreateKeyValues(("Id", 21)),
+                    CreateKeyValues(("Id", 22)),
+                ]
+            ),
+            CancellationToken.None
+        );
+
+        Assert.Equal("crm.Users", result.TableKey);
+        Assert.Equal(2, result.DeletedCount);
+        Assert.Equal(new[] { 23 }, database.Context.CrmUsers.Select(user => user.Id).ToArray());
+    }
+
+    [Fact]
+    public async Task DataService_ShouldFailTransactionallyWhenDeleteViolatesForeignKeys()
+    {
+        if (!database.IsAvailable())
+        {
+            return;
+        }
+
+        await ResetDatabaseAsync();
+
+        database.Context.CrmUsers.AddRange(
+            new CrmUser { Id = 31, Name = "Blocked User" },
+            new CrmUser { Id = 32, Name = "Should Remain" }
+        );
+        database.Context.CrmAuditEntries.Add(
+            new CrmAuditEntry { Id = 501, UserId = 31, EventType = "created" }
+        );
+        await database.Context.SaveChangesAsync();
+
+        var service = new DataService(NullLogger<DataService>.Instance);
+
+        var exception = await Assert.ThrowsAnyAsync<Exception>(() =>
+            service.DeleteRecordsAsync(
+                database.Context,
+                new DeleteRecordsRequestContract(
+                    "crm.Users",
+                    [
+                        CreateKeyValues(("Id", 31)),
+                        CreateKeyValues(("Id", 32)),
+                    ]
+                ),
+                CancellationToken.None
+            )
+        );
+
+        Assert.Contains("still referenced by related data", exception.Message);
+        Assert.Equal(
+            new[] { 31, 32 },
+            database.Context.CrmUsers.OrderBy(user => user.Id).Select(user => user.Id).ToArray()
+        );
+    }
+
     private static PostgresTypeCoverageRecord CreateCoverageRecord()
     {
         return new PostgresTypeCoverageRecord
@@ -282,6 +360,14 @@ public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFix
         }
 
         return row[pascalCaseKey];
+    }
+
+    private static IReadOnlyDictionary<string, JsonElement> CreateKeyValues(params (string Key, object Value)[] pairs)
+    {
+        return pairs.ToDictionary(
+            pair => pair.Key,
+            pair => JsonSerializer.SerializeToElement(pair.Value)
+        );
     }
 
     private sealed record ApiSchemaTable(string Key, string Name, string? Schema);

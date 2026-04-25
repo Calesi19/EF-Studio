@@ -12,6 +12,7 @@ import { Cancel01Icon } from "@hugeicons/core-free-icons";
 export function StudioContent() {
   const {
     activeTab,
+    activeTableDeleteError,
     activeTabId,
     activeTableError,
     activeTableLoading,
@@ -67,6 +68,11 @@ export function StudioContent() {
               {error}
             </div>
           ) : null}
+          {activeTableDeleteError ? (
+            <div className="mx-3 mt-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              {activeTableDeleteError}
+            </div>
+          ) : null}
           {tableLoadErrors.length > 0 && !tableErrorsDismissed ? (
             <div className="mx-3 mt-3 flex items-start gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-100">
               <span className="flex-1">
@@ -108,7 +114,7 @@ export function StudioContent() {
                 message={
                   tables.length === 0
                     ? "The middleware returned an empty schema."
-                    : "EFStudio is currently connected in read-only mode."
+                    : "Select a table to view and manage records."
                 }
               />
             )}

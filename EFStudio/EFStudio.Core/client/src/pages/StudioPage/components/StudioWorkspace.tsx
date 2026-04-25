@@ -2,7 +2,7 @@ import { DataTable } from "@/components/table/DataTable";
 import { useStudioContext } from "@/pages/StudioPage/context/StudioContext";
 
 export function StudioWorkspace() {
-  const { activeTab, selectedTable, currentRows, jumpToReference, changeFilter, changePage, changePageSize, changeSort } =
+  const { activeTab, selectedTable, currentRows, jumpToReference, changeFilter, changePage, changePageSize, changeSort, deleteRows, deleteSelectionResetKey } =
     useStudioContext();
 
   if (!activeTab || !selectedTable) {
@@ -22,11 +22,12 @@ export function StudioWorkspace() {
       onPageChange={changePage}
       onPageSizeChange={changePageSize}
       onAddRecord={() => {}}
+      canAddRecord={false}
+      selectionResetKey={deleteSelectionResetKey}
       onEditRecord={() => {}}
       onDeleteRecord={() => {}}
-      onBulkDelete={() => {}}
+      onBulkDelete={deleteRows}
       onJumpToRef={jumpToReference}
-      readOnly
     />
   );
 }

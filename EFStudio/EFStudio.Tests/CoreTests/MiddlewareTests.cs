@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Net.Http.Json;
 using EFStudio.Core.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -109,12 +110,151 @@ public class MiddlewareTests
         Assert.Equal(expectedUser.Email, GetJsonValue(row, "email", "Email").GetString());
     }
 
+    [Fact]
+    public async Task Middleware_ShouldDeleteSelectedRecords()
+    {
+        using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Filename=:memory:");
+        connection.Open();
+
+        var fakeUsers = TestDataFactory.CreateUsers(3);
+
+        using var host = await new HostBuilder()
+            .ConfigureWebHost(webBuilder =>
+            {
+                webBuilder
+                    .UseTestServer()
+                    .ConfigureServices(services =>
+                    {
+                        services.AddDbContext<TestDbContext>(opt => opt.UseSqlite(connection));
+                        services.AddEFStudio<TestDbContext>();
+                    })
+                    .Configure(app =>
+                    {
+                        using (var scope = app.ApplicationServices.CreateScope())
+                        {
+                            var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+                            db.Database.EnsureCreated();
+                            db.Users.AddRange(fakeUsers);
+                            db.SaveChanges();
+                        }
+
+                        app.UseEFStudio();
+                    });
+            })
+            .StartAsync();
+
+        var client = host.GetTestServer().CreateClient();
+        var request = new
+        {
+            tableKey = "Users",
+            keys = new[]
+            {
+                new Dictionary<string, object> { ["Id"] = fakeUsers[0].Id },
+                new Dictionary<string, object> { ["Id"] = fakeUsers[1].Id },
+            },
+        };
+
+        using var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, "/efstudio/api/data")
+        {
+            Content = JsonContent.Create(request),
+        };
+
+        var response = await client.SendAsync(deleteRequest);
+
+        response.EnsureSuccessStatusCode();
+
+        var payload = await response.Content.ReadAsStringAsync();
+        var deleteResponse = JsonSerializer.Deserialize<DeleteRecordsResponse>(payload, JsonOptions);
+
+        Assert.NotNull(deleteResponse);
+        Assert.Equal("Users", deleteResponse.TableKey);
+        Assert.Equal(2, deleteResponse.DeletedCount);
+
+        var remainingResponse = await client.GetAsync("/efstudio/api/data?table=Users");
+        remainingResponse.EnsureSuccessStatusCode();
+
+        var remainingPayload = await remainingResponse.Content.ReadAsStringAsync();
+        var remainingData = JsonSerializer.Deserialize<TableDataResponse>(remainingPayload, JsonOptions);
+
+        Assert.NotNull(remainingData);
+        Assert.Single(remainingData.Rows);
+    }
+
+    [Fact]
+    public async Task Middleware_ShouldReturnConflictWhenDeleteViolatesForeignKeys()
+    {
+        using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Filename=:memory:");
+        connection.Open();
+
+        var fakeUser = TestDataFactory.CreateUsers(1).Single();
+
+        using var host = await new HostBuilder()
+            .ConfigureWebHost(webBuilder =>
+            {
+                webBuilder
+                    .UseTestServer()
+                    .ConfigureServices(services =>
+                    {
+                        services.AddDbContext<TestDbContext>(opt => opt.UseSqlite(connection));
+                        services.AddEFStudio<TestDbContext>();
+                    })
+                    .Configure(app =>
+                    {
+                        using (var scope = app.ApplicationServices.CreateScope())
+                        {
+                            var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+                            db.Database.EnsureCreated();
+                            db.Users.Add(fakeUser);
+                            db.UserNotes.Add(new TestUserNote
+                            {
+                                Id = 1,
+                                UserId = fakeUser.Id,
+                                Body = "Still referenced",
+                            });
+                            db.SaveChanges();
+                        }
+
+                        app.UseEFStudio();
+                    });
+            })
+            .StartAsync();
+
+        var client = host.GetTestServer().CreateClient();
+        var request = new
+        {
+            tableKey = "Users",
+            keys = new[]
+            {
+                new Dictionary<string, object> { ["Id"] = fakeUser.Id },
+            },
+        };
+
+        using var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, "/efstudio/api/data")
+        {
+            Content = JsonContent.Create(request),
+        };
+
+        var response = await client.SendAsync(deleteRequest);
+
+        Assert.Equal(System.Net.HttpStatusCode.Conflict, response.StatusCode);
+
+        var payload = await response.Content.ReadAsStringAsync();
+        var error = JsonSerializer.Deserialize<ErrorResponse>(payload, JsonOptions);
+
+        Assert.NotNull(error);
+        Assert.Contains("still referenced by related data", error.Message);
+    }
+
     private sealed record TableDataResponse(
         string Key,
         string Name,
         string? Schema,
         List<Dictionary<string, JsonElement>> Rows
     );
+
+    private sealed record DeleteRecordsResponse(string TableKey, int DeletedCount);
+
+    private sealed record ErrorResponse(string Message);
 
     private static JsonElement GetJsonValue(
         IReadOnlyDictionary<string, JsonElement> row,

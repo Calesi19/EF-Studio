@@ -1,7 +1,7 @@
 import { TableBody } from "@/components/ui/table";
 import { useTableState } from "@/hooks/useTableState";
 import type { ColumnDef, FieldValue, PaginationState, RecordRow, SortState } from "@/types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DeleteConfirmDialog } from "../records/DeleteConfirmDialog";
 import { DataTableHeader } from "./DataTableHeader";
 import { DataTablePagination } from "./DataTablePagination";
@@ -36,6 +36,8 @@ interface DataTableProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onAddRecord: () => void;
+  canAddRecord?: boolean;
+  selectionResetKey?: number;
   onEditRecord: (row: RecordRow) => void;
   onDeleteRecord: (row: RecordRow) => void;
   onBulkDelete: (rows: RecordRow[]) => void;
@@ -54,6 +56,8 @@ export function DataTable({
   onPageChange,
   onPageSizeChange,
   onAddRecord,
+  canAddRecord = true,
+  selectionResetKey = 0,
   onEditRecord,
   onDeleteRecord,
   onBulkDelete,
@@ -66,6 +70,14 @@ export function DataTable({
   const [columnOrder, setColumnOrder] = useState<string[]>(() => columns.map((c) => c.name));
   const [draggedCol, setDraggedCol] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSelectedKeys(new Set());
+  }, [columns]);
+
+  useEffect(() => {
+    setSelectedKeys(new Set());
+  }, [selectionResetKey]);
 
   const orderedColumns = columnOrder
     .map((name) => columns.find((c) => c.name === name))
@@ -103,9 +115,15 @@ export function DataTable({
     setDragOverCol(null);
   }
 
-  const pkCol = orderedColumns.find((c) => c.isPrimaryKey);
+  const pkColumns = orderedColumns.filter((c) => c.isPrimaryKey);
   function getRowKey(row: RecordRow): string {
-    return pkCol ? String(row[pkCol.name]) : JSON.stringify(row);
+    if (pkColumns.length === 0) {
+      return JSON.stringify(row);
+    }
+
+    return JSON.stringify(
+      Object.fromEntries(pkColumns.map((column) => [column.name, row[column.name] ?? null])),
+    );
   }
 
   const { paginatedRows, totalRows, totalPages } = useTableState(rows, orderedColumns, filter, sort, pagination);
@@ -161,6 +179,7 @@ export function DataTable({
         filter={filter}
         onFilterChange={(v) => { onFilterChange(v); onPageChange(1); }}
         onAddRecord={onAddRecord}
+        canAddRecord={canAddRecord}
         selectedCount={selectedKeys.size}
         onBulkDelete={() => setBulkDeleteOpen(true)}
         readOnly={readOnly}
