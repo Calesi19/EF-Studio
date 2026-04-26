@@ -5,12 +5,16 @@ namespace EFStudio.Core.Isolation;
 
 internal sealed class TargetAssemblyContext : AssemblyLoadContext
 {
-    private readonly AssemblyDependencyResolver _resolver;
+    private readonly AssemblyDependencyResolver _targetResolver;
+    private readonly AssemblyDependencyResolver? _workerResolver;
 
     public TargetAssemblyContext(string targetAssemblyPath)
         : base("EFStudioTarget", isCollectible: true)
     {
-        _resolver = new AssemblyDependencyResolver(targetAssemblyPath);
+        _targetResolver = new AssemblyDependencyResolver(targetAssemblyPath);
+
+        var entryLocation = Assembly.GetEntryAssembly()?.Location;
+        _workerResolver = entryLocation != null ? new AssemblyDependencyResolver(entryLocation) : null;
     }
 
     protected override Assembly? Load(AssemblyName assemblyName)
@@ -20,14 +24,37 @@ internal sealed class TargetAssemblyContext : AssemblyLoadContext
             return null;
         }
 
-        var assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
+        // Prefer the target project's own deps. For Microsoft.Extensions.Configuration.*
+        // assemblies not found there (e.g. FileExtensions lives in the shared framework, not
+        // NuGet), fall back to the worker's resolver before the default context. Without this,
+        // FileConfigurationExtensions lands in the default context while IConfigurationBuilder
+        // was loaded from the target's NuGet deps — two type identities — causing
+        // MissingMethodException on SetBasePath and similar calls.
+        var assemblyPath = _targetResolver.ResolveAssemblyToPath(assemblyName)
+            ?? ResolveConfigurationFromWorker(assemblyName);
+
         return assemblyPath == null ? null : LoadFromAssemblyPath(assemblyPath);
     }
 
     protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
     {
-        var libraryPath = _resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
+        var libraryPath = _targetResolver.ResolveUnmanagedDllToPath(unmanagedDllName);
         return libraryPath == null ? IntPtr.Zero : LoadUnmanagedDllFromPath(libraryPath);
+    }
+
+    private string? ResolveConfigurationFromWorker(AssemblyName assemblyName)
+    {
+        if (_workerResolver == null)
+        {
+            return null;
+        }
+
+        if (assemblyName.Name?.StartsWith("Microsoft.Extensions.Configuration", StringComparison.Ordinal) != true)
+        {
+            return null;
+        }
+
+        return _workerResolver.ResolveAssemblyToPath(assemblyName);
     }
 
     private static bool ShouldUseDefaultContext(AssemblyName assemblyName)
