@@ -12,6 +12,8 @@ interface DataTableRowProps {
   onDelete: (row: RecordRow) => void;
   onJumpToRef: (tableKey: string, value: FieldValue) => void;
   readOnly?: boolean;
+  hideCheckboxColumn?: boolean;
+  onRowClick?: (row: RecordRow) => void;
   pendingCellEdits?: Record<string, FieldValue>;
   editingColumnName?: string | null;
   onCellDoubleClick?: (columnName: string) => void;
@@ -26,6 +28,8 @@ export function DataTableRow({
   onToggleSelect,
   onJumpToRef,
   readOnly = false,
+  hideCheckboxColumn = false,
+  onRowClick,
   pendingCellEdits,
   editingColumnName,
   onCellDoubleClick,
@@ -36,7 +40,8 @@ export function DataTableRow({
 
   return (
     <TableRow
-      className={`group h-9 ${
+      onClick={onRowClick ? () => onRowClick(row) : undefined}
+      className={`group h-9 ${onRowClick ? "cursor-pointer" : ""} ${
         isSelected
           ? "bg-primary/5 hover:bg-primary/10"
           : hasPending
@@ -44,7 +49,7 @@ export function DataTableRow({
             : "hover:bg-muted/30"
       }`}
     >
-      {!readOnly && (
+      {!readOnly && !hideCheckboxColumn && (
         <TableCell
           className={`sticky left-0 z-10 border-b border-border px-0 py-0 align-middle shadow-[inset_-1px_0_0_var(--color-border)] ${
             isSelected

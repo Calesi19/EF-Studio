@@ -6,7 +6,7 @@ import { useCreateRecords } from "@/api/data/createRecords";
 import { tableDataQueryOptions, type TablePageData } from "@/api/data/fetchTableData";
 import { useDeleteRecords } from "@/api/data/deleteRecords";
 import { useUpdateRecords } from "@/api/data/updateRecords";
-import { buildCreateDraftRow } from "@/components/records/CreateRecordsDialog";
+import { buildCreateDraftRow } from "@/components/records/CreateRecordDrawer";
 import { useSchema } from "@/api/schema/fetchSchema";
 import type { ColumnDef, DbContextDef, FieldValue, PendingEdits, RecordRow, SortState, TableDef, TabState } from "@/types";
 import { DEFAULT_PAGE_NUMBER, DEFAULT_PAGE_SIZE, DEFAULT_SORT } from "@/pages/StudioPage/constants";
@@ -49,16 +49,15 @@ type StudioContextType = {
   activeTableDeleteError: string | null;
   deletingRows: boolean;
   deleteRows: (rows: RecordRow[]) => Promise<void>;
-  createDialogOpen: boolean;
-  createDraftRows: RecordRow[];
+  createDrawerOpen: boolean;
+  createDraftRow: RecordRow;
   creatingRows: boolean;
   activeTableCreateError: string | null;
-  openCreateDialog: () => void;
-  closeCreateDialog: () => void;
-  addCreateDraftRow: () => void;
-  removeCreateDraftRow: (index: number) => void;
-  updateCreateDraftRow: (index: number, field: string, value: FieldValue) => void;
-  submitCreateRows: () => Promise<void>;
+  openCreateDrawer: () => void;
+  closeCreateDrawer: () => void;
+  updateCreateDraftRow: (field: string, value: FieldValue) => void;
+  resetCreateDraftRow: () => void;
+  submitCreateRow: () => Promise<void>;
   pendingEdits: PendingEdits;
   pendingEditCount: number;
   savingEdits: boolean;
@@ -93,8 +92,8 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
 
   const [tableDeleteErrors, setTableDeleteErrors] = useState<Record<string, string>>({});
   const [deleteSelectionResetKey, setDeleteSelectionResetKey] = useState(0);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [createDraftRows, setCreateDraftRows] = useState<RecordRow[]>([]);
+  const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
+  const [createDraftRow, setCreateDraftRow] = useState<RecordRow>({});
   const [tableCreateErrors, setTableCreateErrors] = useState<Record<string, string>>({});
   const [pendingEdits, setPendingEdits] = useState<PendingEdits>(new Map());
   const [tableUpdateErrors, setTableUpdateErrors] = useState<Record<string, string>>({});
@@ -183,8 +182,8 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
   }, [activeTabId]);
 
   useEffect(() => {
-    setCreateDialogOpen(false);
-    setCreateDraftRows([]);
+    setCreateDrawerOpen(false);
+    setCreateDraftRow({});
   }, [activeTabId]);
 
   function serializeRowPk(row: RecordRow, pkColumns: ColumnDef[]): string {
@@ -336,43 +335,32 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function openCreateDialog() {
+  function openCreateDrawer() {
     if (!selectedTable || !activeTab) {
       return;
     }
 
     clearCreateError(activeTab.tableKey);
-    setCreateDraftRows([buildCreateDraftRow(selectedTable)]);
-    setCreateDialogOpen(true);
+    setCreateDraftRow(buildCreateDraftRow(selectedTable));
+    setCreateDrawerOpen(true);
   }
 
-  function closeCreateDialog() {
-    setCreateDialogOpen(false);
-    setCreateDraftRows([]);
+  function closeCreateDrawer() {
+    setCreateDrawerOpen(false);
+    setCreateDraftRow({});
   }
 
-  function addCreateDraftRow() {
-    if (!selectedTable) {
-      return;
-    }
-
-    setCreateDraftRows((current) => [...current, buildCreateDraftRow(selectedTable)]);
+  function updateCreateDraftRow(field: string, value: FieldValue) {
+    setCreateDraftRow((current) => ({ ...current, [field]: value }));
   }
 
-  function removeCreateDraftRow(index: number) {
-    setCreateDraftRows((current) => current.filter((_, currentIndex) => currentIndex !== index));
+  function resetCreateDraftRow() {
+    if (!selectedTable) return;
+    setCreateDraftRow(buildCreateDraftRow(selectedTable));
   }
 
-  function updateCreateDraftRow(index: number, field: string, value: FieldValue) {
-    setCreateDraftRows((current) =>
-      current.map((row, currentIndex) =>
-        currentIndex === index ? { ...row, [field]: value } : row,
-      ),
-    );
-  }
-
-  async function submitCreateRows() {
-    if (!activeTab || !selectedTable || !selectedContextName || createDraftRows.length === 0) {
+  async function submitCreateRow() {
+    if (!activeTab || !selectedTable || !selectedContextName) {
       return;
     }
 
@@ -381,10 +369,9 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
     try {
       await createRecordsMutation.mutateAsync({
         tableKey: activeTab.tableKey,
-        records: createDraftRows,
+        records: [createDraftRow],
       });
 
-      closeCreateDialog();
       await queryClient.invalidateQueries({
         queryKey: ["table-data", selectedContextName, activeTab.tableKey],
       });
@@ -564,16 +551,15 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
         activeTableDeleteError,
         deletingRows,
         deleteRows,
-        createDialogOpen,
-        createDraftRows,
+        createDrawerOpen,
+        createDraftRow,
         creatingRows,
         activeTableCreateError,
-        openCreateDialog,
-        closeCreateDialog,
-        addCreateDraftRow,
-        removeCreateDraftRow,
+        openCreateDrawer,
+        closeCreateDrawer,
         updateCreateDraftRow,
-        submitCreateRows,
+        resetCreateDraftRow,
+        submitCreateRow,
         pendingEdits,
         pendingEditCount,
         savingEdits,

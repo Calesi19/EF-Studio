@@ -16,7 +16,6 @@ interface CreateRecordsDialogProps {
   open: boolean;
   tableDef: TableDef;
   draftRows: RecordRow[];
-  allTables: TableDef[];
   creatingRows: boolean;
   onOpenChange: (open: boolean) => void;
   onAddRow: () => void;
@@ -53,7 +52,6 @@ export function CreateRecordsDialog({
   open,
   tableDef,
   draftRows,
-  allTables,
   creatingRows,
   onOpenChange,
   onAddRow,
@@ -87,7 +85,6 @@ export function CreateRecordsDialog({
                   columns={tableDef.columns}
                   data={row}
                   mode="create"
-                  allTables={allTables}
                   onChange={(field, value) => onChangeRow(index, field, value)}
                 />
               </section>

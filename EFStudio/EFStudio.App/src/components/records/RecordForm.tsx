@@ -1,21 +1,21 @@
-import type { ColumnDef, FieldValue, RecordRow, TableDef } from "@/types";
+import type { ColumnDef, FieldValue, RecordRow } from "@/types";
 import { RecordFormField } from "./RecordFormField";
 
 interface RecordFormProps {
   columns: ColumnDef[];
   data: RecordRow;
   mode: "create" | "edit";
-  allTables: TableDef[];
   onChange: (field: string, value: FieldValue) => void;
+  onBrowseFK?: (columnName: string, refTableKey: string) => void;
 }
 
-export function RecordForm({ columns, data, mode, allTables, onChange }: RecordFormProps) {
+export function RecordForm({ columns, data, mode, onChange, onBrowseFK }: RecordFormProps) {
   const visibleColumns = mode === "create"
     ? columns.filter((column) => column.isEditableOnCreate)
     : columns;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       {visibleColumns.map((col) => (
         <RecordFormField
           key={col.name}
@@ -23,7 +23,7 @@ export function RecordForm({ columns, data, mode, allTables, onChange }: RecordF
           value={data[col.name] ?? null}
           onChange={(value) => onChange(col.name, value)}
           mode={mode}
-          allTables={allTables}
+          onBrowseFK={onBrowseFK}
         />
       ))}
     </div>

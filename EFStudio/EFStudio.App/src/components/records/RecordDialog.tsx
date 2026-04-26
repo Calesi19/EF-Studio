@@ -19,7 +19,6 @@ interface RecordDialogProps {
   onOpenChange: (open: boolean) => void;
   tableDef: TableDef;
   initialData?: RecordRow;
-  allTables: TableDef[];
   onSubmit: (row: RecordRow) => void;
 }
 
@@ -40,18 +39,8 @@ function buildInitialRow(tableDef: TableDef, mode: "create" | "edit", initialDat
   return row;
 }
 
-export function RecordDialog({
-  mode,
-  open,
-  onOpenChange,
-  tableDef,
-  initialData,
-  allTables,
-  onSubmit,
-}: RecordDialogProps) {
-  if (!open) {
-    return null;
-  }
+export function RecordDialog({ mode, open, onOpenChange, tableDef, initialData, onSubmit }: RecordDialogProps) {
+  if (!open) return null;
 
   return (
     <RecordDialogContent
@@ -61,21 +50,12 @@ export function RecordDialog({
       onOpenChange={onOpenChange}
       tableDef={tableDef}
       initialData={initialData}
-      allTables={allTables}
       onSubmit={onSubmit}
     />
   );
 }
 
-function RecordDialogContent({
-  mode,
-  open,
-  onOpenChange,
-  tableDef,
-  initialData,
-  allTables,
-  onSubmit,
-}: RecordDialogProps) {
+function RecordDialogContent({ mode, open, onOpenChange, tableDef, initialData, onSubmit }: RecordDialogProps) {
   const [formData, setFormData] = useState<RecordRow>(() =>
     buildInitialRow(tableDef, mode, initialData)
   );
@@ -102,7 +82,6 @@ function RecordDialogContent({
             columns={tableDef.columns}
             data={formData}
             mode={mode}
-            allTables={allTables}
             onChange={handleChange}
           />
         </ScrollArea>

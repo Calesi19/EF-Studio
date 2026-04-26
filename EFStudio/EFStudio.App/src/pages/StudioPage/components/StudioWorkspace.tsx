@@ -1,4 +1,4 @@
-import { CreateRecordsDialog } from "@/components/records/CreateRecordsDialog";
+import { CreateRecordDrawer } from "@/components/records/CreateRecordDrawer";
 import { DataTable } from "@/components/table/DataTable";
 import { useStudioContext } from "@/pages/StudioPage/context/StudioContext";
 
@@ -17,15 +17,15 @@ export function StudioWorkspace() {
     changeSort,
     deleteRows,
     deleteSelectionResetKey,
-    createDialogOpen,
-    createDraftRows,
+    createDrawerOpen,
+    createDraftRow,
     creatingRows,
-    openCreateDialog,
-    closeCreateDialog,
-    addCreateDraftRow,
-    removeCreateDraftRow,
+    activeTableCreateError,
+    openCreateDrawer,
+    closeCreateDrawer,
     updateCreateDraftRow,
-    submitCreateRows,
+    resetCreateDraftRow,
+    submitCreateRow,
     pendingEdits,
     savingEdits,
     setCellEdit,
@@ -52,7 +52,7 @@ export function StudioWorkspace() {
         onSortChange={changeSort}
         onPageChange={changePage}
         onPageSizeChange={changePageSize}
-        onAddRecord={openCreateDialog}
+        onAddRecord={openCreateDrawer}
         canAddRecord
         selectionResetKey={deleteSelectionResetKey}
         onEditRecord={() => {}}
@@ -66,21 +66,17 @@ export function StudioWorkspace() {
         onSaveEdits={saveEdits}
         onDiscardEdits={discardEdits}
       />
-      <CreateRecordsDialog
-        open={createDialogOpen}
+      <CreateRecordDrawer
+        open={createDrawerOpen}
+        onOpenChange={(open) => { if (!open) closeCreateDrawer(); }}
         tableDef={selectedTable}
-        draftRows={createDraftRows}
+        draftRow={createDraftRow}
         allTables={tables}
-        creatingRows={creatingRows}
-        onOpenChange={(open) => {
-          if (!open) {
-            closeCreateDialog();
-          }
-        }}
-        onAddRow={addCreateDraftRow}
-        onRemoveRow={removeCreateDraftRow}
-        onChangeRow={updateCreateDraftRow}
-        onSubmit={submitCreateRows}
+        creating={creatingRows}
+        error={activeTableCreateError}
+        onChangeField={updateCreateDraftRow}
+        onReset={resetCreateDraftRow}
+        onSubmit={submitCreateRow}
       />
     </>
   );

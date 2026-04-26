@@ -21,6 +21,7 @@ interface DataTableHeaderProps {
   onDrop: (colName: string) => void;
   onDragEnd: () => void;
   readOnly?: boolean;
+  hideCheckboxColumn?: boolean;
 }
 
 const MIN_COL_WIDTH = 60;
@@ -41,6 +42,7 @@ export function DataTableHeader({
   onDrop,
   onDragEnd,
   readOnly = false,
+  hideCheckboxColumn = false,
 }: DataTableHeaderProps) {
   const checkboxRef = useRef<HTMLButtonElement>(null);
 
@@ -79,7 +81,7 @@ export function DataTableHeader({
   return (
     <TableHeader className="sticky top-0 z-20">
       <TableRow className="hover:bg-transparent">
-        {!readOnly && (
+        {!readOnly && !hideCheckboxColumn && (
           <TableHead className="sticky top-0 left-0 z-30 bg-muted px-0 py-1.5 h-auto border-b border-border align-middle shadow-[inset_-1px_0_0_var(--color-border),0_1px_3px_0_oklch(0_0_0/0.08)]">
             <div className="flex justify-center">
               <Checkbox

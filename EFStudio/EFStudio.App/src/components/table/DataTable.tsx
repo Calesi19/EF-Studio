@@ -48,6 +48,8 @@ interface DataTableProps {
   onBulkDelete: (rows: RecordRow[]) => void;
   onJumpToRef: (tableKey: string, value: FieldValue) => void;
   readOnly?: boolean;
+  hideCheckboxColumn?: boolean;
+  onRowClick?: (row: RecordRow) => void;
   pendingEdits?: PendingEdits;
   pendingEditCount?: number;
   savingEdits?: boolean;
@@ -76,6 +78,8 @@ export function DataTable({
   onBulkDelete,
   onJumpToRef,
   readOnly = false,
+  hideCheckboxColumn = false,
+  onRowClick,
   pendingEdits,
   pendingEditCount = 0,
   savingEdits = false,
@@ -201,12 +205,13 @@ export function DataTable({
     setEditingCell(null);
   }
 
+  const showCheckbox = !readOnly && !hideCheckboxColumn;
   const tableWidth =
-    (readOnly ? 0 : READ_WRITE_SELECTION_COLUMN_WIDTH) +
+    (showCheckbox ? READ_WRITE_SELECTION_COLUMN_WIDTH : 0) +
     orderedColumns.reduce((sum, col) => sum + (columnWidths[col.name] ?? colWidth(col)), 0);
   const colgroup = (
     <colgroup>
-      {!readOnly && <col style={{ width: READ_WRITE_SELECTION_COLUMN_WIDTH }} />}
+      {showCheckbox && <col style={{ width: READ_WRITE_SELECTION_COLUMN_WIDTH }} />}
       {orderedColumns.map((col) => (
         <col key={col.name} style={{ width: columnWidths[col.name] ?? colWidth(col) }} />
       ))}
@@ -247,11 +252,12 @@ export function DataTable({
             onDrop={handleDrop}
             onDragEnd={handleDragEnd}
             readOnly={readOnly}
+            hideCheckboxColumn={hideCheckboxColumn}
           />
           <TableBody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={orderedColumns.length + (readOnly ? 0 : 1)} className="py-16 text-center text-xs text-muted-foreground">
+                <td colSpan={orderedColumns.length + (showCheckbox ? 1 : 0)} className="py-16 text-center text-xs text-muted-foreground">
                   {filter ? "No records match your filter." : "No records found."}
                 </td>
               </tr>
@@ -272,6 +278,8 @@ export function DataTable({
                     onDelete={onDeleteRecord}
                     onJumpToRef={onJumpToRef}
                     readOnly={readOnly}
+                    hideCheckboxColumn={hideCheckboxColumn}
+                    onRowClick={onRowClick}
                     pendingCellEdits={pendingCellEdits}
                     editingColumnName={isEditingRow ? editingCell?.columnName : null}
                     onCellDoubleClick={
@@ -297,7 +305,7 @@ export function DataTable({
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
       />
-      {!readOnly && (
+      {showCheckbox && (
         <DeleteConfirmDialog
           open={bulkDeleteOpen}
           onOpenChange={setBulkDeleteOpen}
