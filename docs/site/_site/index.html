@@ -3,14 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>
-      EFStudio
-    </title>
-    <meta name="description" content="A Prisma Studio-style visual database editor for .NET and ASP.NET Core apps." />
+    <title>EFStudio</title>
+    <meta
+      name="description"
+      content="A Prisma Studio-style visual database editor for .NET and ASP.NET Core apps."
+    />
     <link rel="icon" href="/EFStudio/assets/images/favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/EFStudio/assets/css/site.css" />
   </head>
   <body>
@@ -27,33 +31,62 @@
           <span class="brand-name">EFStudio</span>
         </a>
         <nav class="site-nav" aria-label="Primary">
-          <a href="https://github.com/Calesi19/EFStudio" class="nav-link">GitHub</a>
+          <a href="https://github.com/Calesi19/EFStudio" class="nav-link"
+            >GitHub</a
+          >
         </nav>
       </div>
     </header>
 
-    <main class="site-main"><h1 id="efstudio">EFStudio</h1>
+    <main class="site-main">
+      <h1 id="efstudio">EFStudio</h1>
 
-<p class="tagline">A Prisma Studio-style visual database editor for .NET and ASP.NET Core.</p>
+      <p class="tagline">
+        A Prisma Studio-style visual database editor for .NET and ASP.NET Core.
+      </p>
 
-<p>EFStudio embeds a visual table browser directly into your ASP.NET Core app. Point it at your existing <code class="language-plaintext highlighter-rouge">DbContext</code>, start the app, and inspect your data at <code class="language-plaintext highlighter-rouge">/efstudio</code> — no separate database client needed.</p>
+      <p>
+        EFStudio embeds a visual table browser directly into your ASP.NET Core
+        app. Point it at your existing
+        <code class="language-plaintext highlighter-rouge">DbContext</code>,
+        start the app, and inspect your data at
+        <code class="language-plaintext highlighter-rouge">/efstudio</code> — no
+        separate database client needed.
+      </p>
 
-<p>It is designed for development only. The middleware is intentionally guarded so it never runs in production.</p>
+      <p>
+        It is designed for development only. The middleware is intentionally
+        guarded so it never runs in production.
+      </p>
 
-<p><img class="banner" src="/EFStudio/assets/images/banner.webp" alt="EFStudio interface — a table browser showing EF Core entities" /></p>
+      <video
+        src="./docs/demo_fixed.mp4"
+        autoplay
+        loop
+        muted
+        playsinline
+        style="max-width: 100%"
+      ></video>
 
-<h2 id="install">Install</h2>
+      <h2 id="install">Install</h2>
 
-<div class="code-copy-block">
-  <pre><code>dotnet add package EFStudio</code></pre>
-  <button class="copy-btn" aria-label="Copy to clipboard">Copy</button>
-</div>
+      <div class="code-copy-block">
+        <pre><code>dotnet add package EFStudio</code></pre>
+        <button class="copy-btn" aria-label="Copy to clipboard">Copy</button>
+      </div>
 
-<h2 id="wire-it-up">Wire it up</h2>
+      <h2 id="wire-it-up">Wire it up</h2>
 
-<p>Add the service and middleware in <code class="language-plaintext highlighter-rouge">Program.cs</code>:</p>
+      <p>
+        Add the service and middleware in
+        <code class="language-plaintext highlighter-rouge">Program.cs</code>:
+      </p>
 
-<div class="language-csharp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">using</span> <span class="nn">EFStudio.Core.Extensions</span><span class="p">;</span>
+      <div class="language-csharp highlighter-rouge">
+        <div class="highlight">
+          <pre
+            class="highlight"
+          ><code><span class="k">using</span> <span class="nn">EFStudio.Core.Extensions</span><span class="p">;</span>
 <span class="k">using</span> <span class="nn">Microsoft.EntityFrameworkCore</span><span class="p">;</span>
 
 <span class="kt">var</span> <span class="n">builder</span> <span class="p">=</span> <span class="n">WebApplication</span><span class="p">.</span><span class="nf">CreateBuilder</span><span class="p">(</span><span class="n">args</span><span class="p">);</span>
@@ -72,10 +105,15 @@
 <span class="p">}</span>
 
 <span class="n">app</span><span class="p">.</span><span class="nf">Run</span><span class="p">();</span>
-</code></pre></div></div>
+</code></pre>
+        </div>
+      </div>
 
-<p class="note">EFStudio is served at <code>/efstudio</code> by default — for example, <code>http://localhost:5000/efstudio</code>.</p>
-</main>
+      <p class="note">
+        EFStudio is served at <code>/efstudio</code> by default — for example,
+        <code>http://localhost:5000/efstudio</code>.
+      </p>
+    </main>
 
     <footer class="site-footer">
       <div class="footer-inner">
@@ -85,7 +123,9 @@
     <script>
       document.querySelectorAll(".copy-btn").forEach(function (btn) {
         btn.addEventListener("click", function () {
-          var code = btn.closest(".code-copy-block").querySelector("code").innerText;
+          var code = btn
+            .closest(".code-copy-block")
+            .querySelector("code").innerText;
           navigator.clipboard.writeText(code).then(function () {
             btn.textContent = "Copied!";
             btn.classList.add("copied");
