@@ -24,8 +24,8 @@
 
 - **Auto-Discovery**: Finds your target project, builds it, discovers `DbContext` types, and supports multiple contexts.
 - **Zero App Integration**: No package registration or middleware wiring is required.
-- **Read-Only Browsing**: View schema and paged records through a local embedded UI.
 - **Local-Only Server**: Hosts the workbench on `localhost` and opens it in your browser.
+- **One Install**: Install as a .NET global tool and run from any project directory.
 
 ![EFStudio Demo](./docs/demo.webp)
 
