@@ -20,7 +20,7 @@
 
 **EFStudio** is a local browser-based workbench for EF Core apps. Install it as a .NET global tool, run `dotnet efstudio` inside your project directory, and it discovers your `DbContext` types without modifying your application startup.
 
-<video src="./docs/demo_fixed.mp4" autoplay loop muted playsinline style="max-width: 100%;"/>
+<video src="./docs/demo_fixed.mp4" autoplay loop muted playsinline style="max-width: 100%;"></video>
 
 ## Features
 
