@@ -18,11 +18,6 @@ It is designed for local development only. EFStudio starts a local server, opens
   alt="EFStudio interface — a table browser showing EF Core entities"
 />
 
-<video
-src="{{'/assets/demo_fixed.mp4' }}" autoplay loop muted playsinline style="max-width: 100%;"
-alt="EFStudio interface — a table browser showing EF Core entities"
-/>
-
 ## Install
 
 <div class="code-copy-block">
