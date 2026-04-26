@@ -835,19 +835,22 @@ internal sealed class DefaultContextDependencyResolver : IDisposable
 
     private Assembly? Resolve(AssemblyLoadContext context, AssemblyName assemblyName)
     {
-        // If an assembly with the same name is already loaded (possibly at a different version),
-        // return it rather than loading a conflicting copy. Attempting to load a second version
-        // of the same assembly into the Default context causes ReflectionTypeLoadException that
-        // silently hides DbContext types from discovery.
-        var existingByName = AssemblyLoadContext.Default
-            .Assemblies
-            .FirstOrDefault(assembly =>
-                string.Equals(assembly.GetName().Name, assemblyName.Name, StringComparison.OrdinalIgnoreCase)
-            );
-
-        if (existingByName != null)
+        // If an assembly with the same name is already loaded at a version >= the requested version,
+        // return it — this is the roll-forward direction and the runtime will accept it. Never return
+        // a lower version: the runtime rejects it with a manifest-mismatch FileLoadException.
+        if (assemblyName.Version != null)
         {
-            return existingByName;
+            var existingRollForward = AssemblyLoadContext.Default
+                .Assemblies
+                .FirstOrDefault(assembly =>
+                    string.Equals(assembly.GetName().Name, assemblyName.Name, StringComparison.OrdinalIgnoreCase)
+                    && assembly.GetName().Version >= assemblyName.Version
+                );
+
+            if (existingRollForward != null)
+            {
+                return existingRollForward;
+            }
         }
 
         foreach (var resolver in _resolvers)
