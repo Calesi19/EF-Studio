@@ -21,6 +21,8 @@ try
         return 0;
     }
 
+    await using var startupSpinner = StartupSpinner.Start("Starting EFStudio");
+
     var loader = new DbContextCatalogLoader();
     await using var catalog = await loader.LoadAsync(
         new DbContextDiscoveryOptions(
@@ -63,6 +65,7 @@ try
         ? "disabled (--no-browser)"
         : TryOpenBrowser(handle.StudioUri);
 
+    await startupSpinner.CompleteAsync();
     PrintStartupBanner(handle.BaseUri, handle.StudioUri, browserStatus);
 
     await handle.WaitForShutdownAsync(cancellationTokenSource.Token);
@@ -74,6 +77,7 @@ catch (OperationCanceledException)
 }
 catch (Exception exception)
 {
+    StartupSpinner.ClearCurrent();
     Console.Error.WriteLine(GetErrorMessage(exception));
     return 1;
 }
@@ -318,6 +322,115 @@ static string GetErrorMessage(Exception exception)
         : exception.GetBaseException();
 
     return effectiveException.Message;
+}
+
+internal sealed class StartupSpinner : IAsyncDisposable
+{
+    private static readonly object SyncRoot = new();
+    private static StartupSpinner? _current;
+    private static readonly char[] Frames = { '|', '/', '-', '\\' };
+
+    private readonly string _message;
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private readonly Task? _animationTask;
+    private readonly bool _isEnabled;
+    private bool _isCompleted;
+
+    private StartupSpinner(string message)
+    {
+        _message = message;
+        _isEnabled = !Console.IsOutputRedirected;
+        if (_isEnabled)
+        {
+            lock (SyncRoot)
+            {
+                _current = this;
+            }
+
+            _animationTask = AnimateAsync(_cancellationTokenSource.Token);
+        }
+    }
+
+    public static StartupSpinner Start(string message) => new(message);
+
+    public static void ClearCurrent()
+    {
+        lock (SyncRoot)
+        {
+            _current?.ClearLine();
+        }
+    }
+
+    public async Task CompleteAsync()
+    {
+        if (_isCompleted)
+        {
+            return;
+        }
+
+        _isCompleted = true;
+        if (!_isEnabled)
+        {
+            return;
+        }
+
+        _cancellationTokenSource.Cancel();
+
+        if (_animationTask != null)
+        {
+            try
+            {
+                await _animationTask;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        lock (SyncRoot)
+        {
+            ClearLine();
+            if (ReferenceEquals(_current, this))
+            {
+                _current = null;
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await CompleteAsync();
+        _cancellationTokenSource.Dispose();
+    }
+
+    private async Task AnimateAsync(CancellationToken cancellationToken)
+    {
+        var frameIndex = 0;
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            lock (SyncRoot)
+            {
+                Console.Write($"\r{_message} {Frames[frameIndex]}");
+            }
+
+            frameIndex = (frameIndex + 1) % Frames.Length;
+            await Task.Delay(TimeSpan.FromMilliseconds(120), cancellationToken);
+        }
+    }
+
+    private void ClearLine()
+    {
+        if (!_isEnabled)
+        {
+            return;
+        }
+
+        var width = Math.Max(Console.BufferWidth - 1, _message.Length + 2);
+        Console.Write("\r");
+        Console.Write(new string(' ', width));
+        Console.Write("\r");
+    }
 }
 
 internal sealed record ToolOptions(
