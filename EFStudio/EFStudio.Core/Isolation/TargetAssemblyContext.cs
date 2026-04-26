@@ -15,7 +15,7 @@ internal sealed class TargetAssemblyContext : AssemblyLoadContext
 
     protected override Assembly? Load(AssemblyName assemblyName)
     {
-        if (string.Equals(assemblyName.Name, "EFStudio.Contracts", StringComparison.OrdinalIgnoreCase))
+        if (ShouldUseDefaultContext(assemblyName))
         {
             return null;
         }
@@ -28,5 +28,26 @@ internal sealed class TargetAssemblyContext : AssemblyLoadContext
     {
         var libraryPath = _resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
         return libraryPath == null ? IntPtr.Zero : LoadUnmanagedDllFromPath(libraryPath);
+    }
+
+    private static bool ShouldUseDefaultContext(AssemblyName assemblyName)
+    {
+        var name = assemblyName.Name;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return true;
+        }
+
+        if (string.Equals(name, "EFStudio.Contracts", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return name.StartsWith("Microsoft.AspNetCore.", StringComparison.Ordinal)
+            || name.StartsWith("Microsoft.Extensions.", StringComparison.Ordinal)
+            || name.StartsWith("System.", StringComparison.Ordinal)
+            || string.Equals(name, "System", StringComparison.Ordinal)
+            || string.Equals(name, "mscorlib", StringComparison.Ordinal)
+            || string.Equals(name, "netstandard", StringComparison.Ordinal);
     }
 }
