@@ -14,7 +14,7 @@ It is designed for local development only. EFStudio starts a local server, opens
 
 <img
   class="banner"
-  src="{{ '/assets/images/banner.webp' | relative_url }}"
+  src="{{ '/assets/images/demo.webp' | relative_url }}"
   alt="EFStudio interface — a table browser showing EF Core entities"
 />
 
