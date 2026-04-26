@@ -1,4 +1,4 @@
-namespace EFStudio.Core.Contracts;
+namespace EFStudio.Contracts;
 
 public record ColumnInfoContract(
     string Name,

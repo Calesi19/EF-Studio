@@ -1,3 +1,3 @@
-namespace EFStudio.Core.Contracts;
+namespace EFStudio.Contracts;
 
 public record DeleteRecordsResponseContract(string TableKey, int DeletedCount);

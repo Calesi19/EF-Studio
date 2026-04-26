@@ -1,5 +1,5 @@
 using System.Text.Json;
-using EFStudio.Core.Contracts;
+using EFStudio.Contracts;
 using EFStudio.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;

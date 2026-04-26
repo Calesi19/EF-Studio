@@ -1,6 +1,6 @@
 namespace EFStudio.Core.Services;
 
-internal sealed class EFStudioRequestException : Exception
+public sealed class EFStudioRequestException : Exception
 {
     public int StatusCode { get; }
 

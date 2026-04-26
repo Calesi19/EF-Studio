@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Globalization;
 using System.Text.Json;
-using EFStudio.Core.Contracts;
+using EFStudio.Contracts;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;

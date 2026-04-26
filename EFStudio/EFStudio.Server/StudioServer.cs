@@ -1,6 +1,7 @@
-using System.Text.Json;
+using System.Net;
 using System.Reflection;
-using EFStudio.Core.Contracts;
+using System.Text.Json;
+using EFStudio.Contracts;
 using EFStudio.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -17,7 +18,7 @@ public sealed class StudioServer
 
     public async Task<StudioServerHandle> StartAsync(
         StudioServerOptions options,
-        IDbContextCatalog dbContextCatalog,
+        ITargetHost targetHost,
         CancellationToken cancellationToken = default
     )
     {
@@ -31,9 +32,7 @@ public sealed class StudioServer
             console.TimestampFormat = "HH:mm:ss ";
         });
 
-        builder.Services.AddSingleton(dbContextCatalog);
-        builder.Services.AddSingleton<ISchemaService, SchemaService>();
-        builder.Services.AddSingleton<IDataService, DataService>();
+        builder.Services.AddSingleton(targetHost);
         builder.Services.AddSingleton<StudioAssetService>();
 
         var app = builder.Build();
@@ -41,11 +40,11 @@ public sealed class StudioServer
         app.MapGet("/", () => Results.Redirect("/efstudio"));
         app.MapGet("/efstudio/api/health", () => Results.Ok(new { status = "ok", readOnly = true }));
 
-        app.MapGet("/efstudio/api/contexts", (IDbContextCatalog catalog) =>
+        app.MapGet("/efstudio/api/contexts", (ITargetHost host) =>
             Results.Json(
                 new DbContextListResponseContract(
-                    catalog.GetAvailableContexts(),
-                    catalog.GetSelectedContextName()
+                    host.GetAvailableContexts(),
+                    host.GetSelectedContextName()
                 ),
                 JsonOptions
             )
@@ -53,14 +52,14 @@ public sealed class StudioServer
 
         app.MapPost(
             "/efstudio/api/contexts/select",
-            async (HttpContext httpContext, IDbContextCatalog catalog) =>
+            async (HttpContext httpContext, ITargetHost host) =>
             {
                 var request = await httpContext.Request.ReadFromJsonAsync<SelectDbContextRequestContract>(
                     JsonOptions,
                     httpContext.RequestAborted
                 );
 
-                if (request == null || !catalog.SelectContext(request.ContextName))
+                if (request == null || !host.SelectContext(request.ContextName))
                 {
                     return Results.NotFound(
                         new ErrorResponseContract(
@@ -71,8 +70,8 @@ public sealed class StudioServer
 
                 return Results.Json(
                     new DbContextListResponseContract(
-                        catalog.GetAvailableContexts(),
-                        catalog.GetSelectedContextName()
+                        host.GetAvailableContexts(),
+                        host.GetSelectedContextName()
                     ),
                     JsonOptions
                 );
@@ -81,57 +80,43 @@ public sealed class StudioServer
 
         app.MapGet(
             "/efstudio/api/schema",
-            async (
-                HttpContext httpContext,
-                IDbContextCatalog catalog,
-                ISchemaService schemaService
-            ) =>
+            async (HttpContext httpContext, ITargetHost host) =>
             {
                 try
                 {
-                    var contextName = httpContext.Request.Query["context"].ToString();
-                    await using var lease = await catalog.LeaseDbContextAsync(
-                        string.IsNullOrWhiteSpace(contextName) ? null : contextName,
-                        httpContext.RequestAborted
+                    return Results.Json(
+                        await host.GetSchemaAsync(GetContextName(httpContext), httpContext.RequestAborted),
+                        JsonOptions
                     );
-
-                    return Results.Json(schemaService.GetSchema(lease.Context), JsonOptions);
                 }
                 catch (Exception exception)
                 {
-                    return Results.BadRequest(new ErrorResponseContract(GetErrorMessage(exception)));
+                    return ToErrorResult(exception);
                 }
             }
         );
 
         app.MapGet(
             "/efstudio/api/tables",
-            async (
-                HttpContext httpContext,
-                IDbContextCatalog catalog,
-                ISchemaService schemaService
-            ) =>
+            async (HttpContext httpContext, ITargetHost host) =>
             {
                 try
                 {
-                    var contextName = httpContext.Request.Query["context"].ToString();
-                    await using var lease = await catalog.LeaseDbContextAsync(
-                        string.IsNullOrWhiteSpace(contextName) ? null : contextName,
-                        httpContext.RequestAborted
+                    return Results.Json(
+                        await host.GetSchemaAsync(GetContextName(httpContext), httpContext.RequestAborted),
+                        JsonOptions
                     );
-
-                    return Results.Json(schemaService.GetSchema(lease.Context), JsonOptions);
                 }
                 catch (Exception exception)
                 {
-                    return Results.BadRequest(new ErrorResponseContract(GetErrorMessage(exception)));
+                    return ToErrorResult(exception);
                 }
             }
         );
 
         app.MapGet(
             "/efstudio/api/data",
-            async (HttpContext httpContext, IDbContextCatalog catalog, IDataService dataService) =>
+            async (HttpContext httpContext, ITargetHost host) =>
             {
                 var tableKey = httpContext.Request.Query["table"].ToString();
                 if (string.IsNullOrWhiteSpace(tableKey))
@@ -143,14 +128,8 @@ public sealed class StudioServer
 
                 try
                 {
-                    var contextName = httpContext.Request.Query["context"].ToString();
-                    await using var lease = await catalog.LeaseDbContextAsync(
-                        string.IsNullOrWhiteSpace(contextName) ? null : contextName,
-                        httpContext.RequestAborted
-                    );
-
-                    var page = await dataService.GetTablePageAsync(
-                        lease.Context,
+                    var page = await host.GetTablePageAsync(
+                        GetContextName(httpContext),
                         new TablePageRequestContract(
                             tableKey,
                             ParseInt(httpContext.Request.Query["page"], 1),
@@ -170,14 +149,14 @@ public sealed class StudioServer
                 }
                 catch (Exception exception)
                 {
-                    return Results.BadRequest(new ErrorResponseContract(GetErrorMessage(exception)));
+                    return ToErrorResult(exception);
                 }
             }
         );
 
         app.MapPut(
             "/efstudio/api/data",
-            async (HttpContext httpContext, IDbContextCatalog catalog, IDataService dataService) =>
+            async (HttpContext httpContext, ITargetHost host) =>
             {
                 try
                 {
@@ -193,14 +172,8 @@ public sealed class StudioServer
                         );
                     }
 
-                    var contextName = httpContext.Request.Query["context"].ToString();
-                    await using var lease = await catalog.LeaseDbContextAsync(
-                        string.IsNullOrWhiteSpace(contextName) ? null : contextName,
-                        httpContext.RequestAborted
-                    );
-
-                    var result = await dataService.UpdateRecordsAsync(
-                        lease.Context,
+                    var result = await host.UpdateRecordsAsync(
+                        GetContextName(httpContext),
                         request,
                         httpContext.RequestAborted
                     );
@@ -209,7 +182,40 @@ public sealed class StudioServer
                 }
                 catch (Exception exception)
                 {
-                    return Results.BadRequest(new ErrorResponseContract(GetErrorMessage(exception)));
+                    return ToErrorResult(exception);
+                }
+            }
+        );
+
+        app.MapDelete(
+            "/efstudio/api/data",
+            async (HttpContext httpContext, ITargetHost host) =>
+            {
+                try
+                {
+                    var request = await httpContext.Request.ReadFromJsonAsync<DeleteRecordsRequestContract>(
+                        JsonOptions,
+                        httpContext.RequestAborted
+                    );
+
+                    if (request == null)
+                    {
+                        return Results.BadRequest(
+                            new ErrorResponseContract("Provide a delete request before deleting records.")
+                        );
+                    }
+
+                    var result = await host.DeleteRecordsAsync(
+                        GetContextName(httpContext),
+                        request,
+                        httpContext.RequestAborted
+                    );
+
+                    return Results.Json(result, JsonOptions);
+                }
+                catch (Exception exception)
+                {
+                    return ToErrorResult(exception);
                 }
             }
         );
@@ -237,18 +243,41 @@ public sealed class StudioServer
         return new StudioServerHandle(app, GetBaseUri(app, options));
     }
 
-    private static int ParseInt(string? value, int fallback)
+    private static string? GetContextName(HttpContext httpContext)
     {
-        return int.TryParse(value, out var parsed) ? parsed : fallback;
+        var contextName = httpContext.Request.Query["context"].ToString();
+        return string.IsNullOrWhiteSpace(contextName) ? null : contextName;
     }
 
-    private static string GetErrorMessage(Exception exception)
+    private static IResult ToErrorResult(Exception exception)
     {
         var effectiveException = exception is TargetInvocationException && exception.InnerException != null
             ? exception.InnerException
             : exception.GetBaseException();
 
-        return effectiveException.Message;
+        if (effectiveException is TargetHostException hostException)
+        {
+            return Results.Json(
+                new ErrorResponseContract(hostException.Message),
+                JsonOptions,
+                statusCode: hostException.StatusCode
+            );
+        }
+
+        var statusCode = effectiveException is InvalidOperationException
+            ? HttpStatusCode.BadRequest
+            : HttpStatusCode.InternalServerError;
+
+        return Results.Json(
+            new ErrorResponseContract(effectiveException.Message),
+            JsonOptions,
+            statusCode: (int)statusCode
+        );
+    }
+
+    private static int ParseInt(string? value, int fallback)
+    {
+        return int.TryParse(value, out var parsed) ? parsed : fallback;
     }
 
     private static Uri GetBaseUri(WebApplication app, StudioServerOptions options)

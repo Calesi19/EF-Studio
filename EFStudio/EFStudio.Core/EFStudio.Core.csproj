@@ -8,6 +8,10 @@
     <IsDevelopmentDependency>true</IsDevelopmentDependency>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="Contracts\**\*.cs" />
+  </ItemGroup>
+
   <PropertyGroup Condition="'$(TargetFramework)' == 'net6.0'">
     <EfCoreVersion>6.0.36</EfCoreVersion>
   </PropertyGroup>
@@ -31,6 +35,7 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <EmbeddedResource Include="wwwroot\**" />
+    <ProjectReference Include="..\EFStudio.Contracts\EFStudio.Contracts.csproj" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="$(EfCoreVersion)" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" VersionOverride="$(EfCoreVersion)" />
   </ItemGroup>

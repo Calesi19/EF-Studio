@@ -1,4 +1,4 @@
-namespace EFStudio.Core.Contracts;
+namespace EFStudio.Contracts;
 
 public record TableDataResponseContract(
     string Key,

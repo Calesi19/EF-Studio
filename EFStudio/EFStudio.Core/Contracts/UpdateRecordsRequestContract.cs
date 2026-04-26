@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace EFStudio.Core.Contracts;
+namespace EFStudio.Contracts;
 
 public record UpdateRecordEntry(
     IReadOnlyDictionary<string, JsonElement> Keys,

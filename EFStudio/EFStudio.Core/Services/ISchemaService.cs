@@ -1,4 +1,4 @@
-using EFStudio.Core.Contracts;
+using EFStudio.Contracts;
 using Microsoft.EntityFrameworkCore;
 
 namespace EFStudio.Core.Services;

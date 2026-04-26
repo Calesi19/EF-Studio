@@ -13,6 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\EFStudio.Contracts\EFStudio.Contracts.csproj" />
     <ProjectReference Include="..\EFStudio.Core\EFStudio.Core.csproj" />
     <ProjectReference Include="..\EFStudio.Server\EFStudio.Server.csproj" />
   </ItemGroup>
