@@ -43,9 +43,12 @@ internal sealed class TargetAssemblyContext : AssemblyLoadContext
             return true;
         }
 
-        return name.StartsWith("Microsoft.AspNetCore.", StringComparison.Ordinal)
-            || name.StartsWith("Microsoft.Extensions.", StringComparison.Ordinal)
-            || name.StartsWith("System.", StringComparison.Ordinal)
+        // System.* must be shared — the CLR primitive types cannot have two identities.
+        // Microsoft.AspNetCore.* and Microsoft.Extensions.* are intentionally NOT excluded here:
+        // the resolver tries the target project's deps first (handles version mismatches, e.g.
+        // a net9.0 project referencing Extensions 10.x from NuGet), and returns null if it
+        // can't resolve, which falls back to the default context as before.
+        return name.StartsWith("System.", StringComparison.Ordinal)
             || string.Equals(name, "System", StringComparison.Ordinal)
             || string.Equals(name, "mscorlib", StringComparison.Ordinal)
             || string.Equals(name, "netstandard", StringComparison.Ordinal);
