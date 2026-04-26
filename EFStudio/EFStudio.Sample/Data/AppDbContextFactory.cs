@@ -13,8 +13,7 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
         var basePath = Path.GetDirectoryName(assemblyLocation)
             ?? throw new InvalidOperationException("EFStudio could not determine the sample assembly directory.");
         var configuration = new ConfigurationBuilder()
-            .SetBasePath(basePath)
-            .AddJsonFile("appsettings.json", optional: true)
+            .AddJsonFile(Path.Combine(basePath, "appsettings.json"), optional: true)
             .AddEnvironmentVariables()
             .Build();
 
