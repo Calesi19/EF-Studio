@@ -7,6 +7,70 @@ using Xunit;
 public class DataServiceTests : TestDatabaseBase
 {
     [Fact]
+    public async Task CreateRecordsAsync_ShouldCreateMultipleRows()
+    {
+        var service = new DataService(NullLogger<DataService>.Instance);
+
+        var result = await service.CreateRecordsAsync(
+            Context,
+            new CreateRecordsRequestContract(
+                "Users",
+                [
+                    CreateKeyValues(
+                        ("Name", "Ada Lovelace"),
+                        ("Email", "ada@example.com"),
+                        ("IsActive", true),
+                        ("CreatedAtUtc", new DateTime(2026, 4, 24, 12, 0, 0, DateTimeKind.Utc)),
+                        ("CreditLimit", 1500.75m)
+                    ),
+                    CreateKeyValues(
+                        ("Name", "Grace Hopper"),
+                        ("Email", "grace@example.com"),
+                        ("IsActive", false),
+                        ("CreatedAtUtc", new DateTime(2026, 4, 24, 13, 0, 0, DateTimeKind.Utc)),
+                        ("CreditLimit", 2100.50m)
+                    ),
+                ]
+            ),
+            CancellationToken.None
+        );
+
+        Assert.Equal("Users", result.TableKey);
+        Assert.Equal(2, result.CreatedCount);
+        Assert.Equal(2, Context.Users.Count());
+        Assert.All(result.Records, row => Assert.True(Convert.ToInt32(row["Id"]) > 0));
+    }
+
+    [Fact]
+    public async Task CreateRecordsAsync_ShouldRejectMissingRequiredColumn()
+    {
+        var service = new DataService(NullLogger<DataService>.Instance);
+
+        var exception = await Assert.ThrowsAnyAsync<Exception>(() =>
+            service.CreateRecordsAsync(
+                Context,
+                new CreateRecordsRequestContract(
+                    "Users",
+                    [
+                        CreateKeyValues(
+                            ("Email", "ada@example.com"),
+                            ("IsActive", true),
+                            ("CreatedAtUtc", new DateTime(2026, 4, 24, 12, 0, 0, DateTimeKind.Utc)),
+                            ("CreditLimit", 1500.75m)
+                        ),
+                    ]
+                ),
+                CancellationToken.None
+            )
+        );
+
+        Assert.Equal(
+            "Create requests for 'Users' must include the required column 'Name'.",
+            exception.Message
+        );
+    }
+
+    [Fact]
     public async Task GetTableDataAsync_ShouldReturnBogusRows()
     {
         // Arrange

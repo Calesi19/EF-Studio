@@ -292,6 +292,12 @@ public sealed class DbContextCatalogLoader
             CancellationToken cancellationToken
         ) => _innerHost.GetTablePageAsync(contextName, request, cancellationToken);
 
+        public Task<CreateRecordsResponseContract> CreateRecordsAsync(
+            string? contextName,
+            CreateRecordsRequestContract request,
+            CancellationToken cancellationToken
+        ) => _innerHost.CreateRecordsAsync(contextName, request, cancellationToken);
+
         public Task<UpdateRecordsResponseContract> UpdateRecordsAsync(
             string? contextName,
             UpdateRecordsRequestContract request,

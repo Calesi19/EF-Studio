@@ -17,6 +17,8 @@ interface ApiColumnInfo {
   isPrimaryKey: boolean;
   isNullable: boolean;
   isForeignKey: boolean;
+  isGeneratedOnAdd: boolean;
+  isEditableOnCreate: boolean;
   foreignKeyTable?: string | null;
 }
 
@@ -74,6 +76,8 @@ function normalizeColumn(column: ApiColumnInfo): ColumnDef {
     isPrimaryKey: column.isPrimaryKey,
     isForeignKey: column.isForeignKey,
     isNullable: column.isNullable,
+    isGeneratedOnAdd: column.isGeneratedOnAdd,
+    isEditableOnCreate: column.isEditableOnCreate,
     foreignKeyTable: column.foreignKeyTable ?? undefined,
   };
 }

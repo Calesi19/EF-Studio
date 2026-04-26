@@ -43,6 +43,15 @@ internal sealed class TargetAssemblyContext : AssemblyLoadContext
             return true;
         }
 
+        // Microsoft.Extensions.Configuration.* does not need to be shared for type identity —
+        // EFStudio never accesses IConfigurationBuilder directly. Letting the target load its
+        // own version avoids MissingMethodException when SetBasePath is unavailable in the
+        // worker's runtime (e.g. rolled forward to .NET 10 where the method was removed).
+        if (name.StartsWith("Microsoft.Extensions.Configuration", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
         return name.StartsWith("Microsoft.AspNetCore.", StringComparison.Ordinal)
             || name.StartsWith("Microsoft.Extensions.", StringComparison.Ordinal)
             || name.StartsWith("System.", StringComparison.Ordinal)

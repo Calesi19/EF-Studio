@@ -246,6 +246,36 @@ public class PostgresIntegrationTests(PostgresTestDatabase database) : IClassFix
     }
 
     [Fact]
+    public async Task DataService_ShouldCreateRowsForQualifiedPostgresTableKey()
+    {
+        if (!database.IsAvailable())
+        {
+            return;
+        }
+
+        await ResetDatabaseAsync();
+
+        var service = new DataService(NullLogger<DataService>.Instance);
+
+        var result = await service.CreateRecordsAsync(
+            database.Context,
+            new CreateRecordsRequestContract(
+                "crm.Users",
+                [
+                    CreateKeyValues(("Name", "Create One")),
+                    CreateKeyValues(("Name", "Create Two")),
+                ]
+            ),
+            CancellationToken.None
+        );
+
+        Assert.Equal("crm.Users", result.TableKey);
+        Assert.Equal(2, result.CreatedCount);
+        Assert.Equal(2, database.Context.CrmUsers.Count());
+        Assert.All(result.Records, row => Assert.True(Convert.ToInt32(row["Id"]) > 0));
+    }
+
+    [Fact]
     public async Task DataService_ShouldFailTransactionallyWhenDeleteViolatesForeignKeys()
     {
         if (!database.IsAvailable())

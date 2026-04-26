@@ -44,7 +44,9 @@ public class SchemaService : ISchemaService
                                 foreignKey != null,
                                 foreignKey == null
                                     ? null
-                                    : TableKeyFactory.Create(foreignKey.PrincipalEntityType)
+                                    : TableKeyFactory.Create(foreignKey.PrincipalEntityType),
+                                property.ValueGenerated == ValueGenerated.OnAdd,
+                                property.ValueGenerated != ValueGenerated.OnAdd
                             );
                         })
                         .ToList()

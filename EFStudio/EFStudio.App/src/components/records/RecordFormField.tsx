@@ -30,11 +30,14 @@ function getRowLabel(row: RecordRow, labelCol: string): string {
 }
 
 export function RecordFormField({ column, value, onChange, mode, allTables }: RecordFormFieldProps) {
-  const isDisabled = column.isPrimaryKey && mode === "edit";
+  const isDisabled =
+    (column.isPrimaryKey && mode === "edit")
+    || (mode === "create" && !column.isEditableOnCreate);
 
   const fkTable = column.isForeignKey && column.foreignKeyTable
     ? allTables.find((t) => t.key === column.foreignKeyTable)
     : null;
+  const hasForeignKeyOptions = !!fkTable && fkTable.rows.length > 0;
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -44,7 +47,7 @@ export function RecordFormField({ column, value, onChange, mode, allTables }: Re
         {column.isNullable && <span className="ml-1 text-muted-foreground/60">nullable</span>}
       </Label>
 
-      {fkTable ? (
+      {hasForeignKeyOptions ? (
         <Select
           value={value !== null ? String(value) : ""}
           onValueChange={(v) => onChange(v)}

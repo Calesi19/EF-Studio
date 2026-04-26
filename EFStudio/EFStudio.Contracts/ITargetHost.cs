@@ -14,6 +14,11 @@ public interface ITargetHost : IDisposable, IAsyncDisposable
         TablePageRequestContract request,
         CancellationToken cancellationToken
     );
+    Task<CreateRecordsResponseContract> CreateRecordsAsync(
+        string? contextName,
+        CreateRecordsRequestContract request,
+        CancellationToken cancellationToken
+    );
     Task<UpdateRecordsResponseContract> UpdateRecordsAsync(
         string? contextName,
         UpdateRecordsRequestContract request,

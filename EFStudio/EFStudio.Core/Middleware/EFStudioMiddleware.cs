@@ -181,6 +181,34 @@ public class EFStudioMiddleware
                     return;
                 }
 
+                if (HttpMethods.IsPost(context.Request.Method))
+                {
+                    var request = await JsonSerializer.DeserializeAsync<CreateRecordsRequestContract>(
+                        context.Request.Body,
+                        JsonOptions,
+                        context.RequestAborted
+                    );
+
+                    if (request == null)
+                    {
+                        await WriteErrorAsync(
+                            context,
+                            StatusCodes.Status400BadRequest,
+                            "Provide a create request before creating records."
+                        );
+                        return;
+                    }
+
+                    var result = await dataService.CreateRecordsAsync(
+                        dbContext,
+                        request,
+                        context.RequestAborted
+                    );
+
+                    await WriteJsonAsync(context, StatusCodes.Status200OK, result);
+                    return;
+                }
+
                 if (HttpMethods.IsPut(context.Request.Method))
                 {
                     var request = await JsonSerializer.DeserializeAsync<UpdateRecordsRequestContract>(
@@ -210,7 +238,7 @@ public class EFStudioMiddleware
                 }
 
                 context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
-                context.Response.Headers.Allow = $"{HttpMethods.Get}, {HttpMethods.Delete}, {HttpMethods.Put}";
+                context.Response.Headers.Allow = $"{HttpMethods.Get}, {HttpMethods.Post}, {HttpMethods.Delete}, {HttpMethods.Put}";
                 return;
             }
 
@@ -237,6 +265,17 @@ public class EFStudioMiddleware
                 context,
                 StatusCodes.Status400BadRequest,
                 "Provide a valid delete request before deleting records."
+            );
+        }
+        catch (JsonException) when (
+            path.Equals(DataPath, StringComparison.OrdinalIgnoreCase) &&
+            HttpMethods.IsPost(context.Request.Method)
+        )
+        {
+            await WriteErrorAsync(
+                context,
+                StatusCodes.Status400BadRequest,
+                "Provide a valid create request before creating records."
             );
         }
         catch (JsonException) when (

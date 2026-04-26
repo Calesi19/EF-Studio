@@ -109,6 +109,23 @@ internal sealed class TargetHost : ITargetHost
         return await _dataService.GetTablePageAsync(lease.Context, request, cancellationToken);
     }
 
+    public async Task<CreateRecordsResponseContract> CreateRecordsAsync(
+        string? contextName,
+        CreateRecordsRequestContract request,
+        CancellationToken cancellationToken
+    )
+    {
+        try
+        {
+            await using var lease = LeaseDbContext(contextName, cancellationToken);
+            return await _dataService.CreateRecordsAsync(lease.Context, request, cancellationToken);
+        }
+        catch (EFStudioRequestException exception)
+        {
+            throw new TargetHostException(exception.StatusCode, exception.Message, exception);
+        }
+    }
+
     public async Task<UpdateRecordsResponseContract> UpdateRecordsAsync(
         string? contextName,
         UpdateRecordsRequestContract request,

@@ -6,5 +6,7 @@ public record ColumnInfoContract(
     bool IsPrimaryKey,
     bool IsNullable,
     bool IsForeignKey,
-    string? ForeignKeyTable
+    string? ForeignKeyTable,
+    bool IsGeneratedOnAdd,
+    bool IsEditableOnCreate
 );

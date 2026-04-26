@@ -61,6 +61,18 @@ internal sealed class TestDbContextCatalog(
         return await _dataService.GetTablePageAsync(context, request, cancellationToken);
     }
 
+    public Task<CreateRecordsResponseContract> CreateRecordsAsync(
+        string? contextName,
+        CreateRecordsRequestContract request,
+        CancellationToken cancellationToken
+    )
+    {
+        return ExecuteAsync(
+            contextName,
+            context => _dataService.CreateRecordsAsync(context, request, cancellationToken)
+        );
+    }
+
     public Task<UpdateRecordsResponseContract> UpdateRecordsAsync(
         string? contextName,
         UpdateRecordsRequestContract request,

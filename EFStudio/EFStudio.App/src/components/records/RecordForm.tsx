@@ -10,9 +10,13 @@ interface RecordFormProps {
 }
 
 export function RecordForm({ columns, data, mode, allTables, onChange }: RecordFormProps) {
+  const visibleColumns = mode === "create"
+    ? columns.filter((column) => column.isEditableOnCreate)
+    : columns;
+
   return (
     <div className="flex flex-col gap-4">
-      {columns.map((col) => (
+      {visibleColumns.map((col) => (
         <RecordFormField
           key={col.name}
           column={col}

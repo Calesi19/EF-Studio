@@ -14,6 +14,8 @@ export interface ColumnDef {
   isPrimaryKey: boolean;
   isForeignKey: boolean;
   isNullable: boolean;
+  isGeneratedOnAdd: boolean;
+  isEditableOnCreate: boolean;
   foreignKeyTable?: string;
 }
 

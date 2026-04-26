@@ -16,6 +16,147 @@ public class DataService : IDataService
 
     public DataService(ILogger<DataService> logger) => _logger = logger;
 
+    public async Task<CreateRecordsResponseContract> CreateRecordsAsync(
+        DbContext dbContext,
+        CreateRecordsRequestContract request,
+        CancellationToken cancellationToken
+    )
+    {
+        if (string.IsNullOrWhiteSpace(request.TableKey))
+        {
+            throw new EFStudioRequestException(
+                StatusCodes.Status400BadRequest,
+                "Choose a table before creating records."
+            );
+        }
+
+        if (request.Records.Count == 0)
+        {
+            throw new EFStudioRequestException(
+                StatusCodes.Status400BadRequest,
+                "Provide at least one record to create."
+            );
+        }
+
+        var entityType = dbContext
+            .Model.GetEntityTypes()
+            .FirstOrDefault(t => TableKeyFactory.Create(t) == request.TableKey);
+
+        if (entityType == null)
+        {
+            throw new EFStudioRequestException(
+                StatusCodes.Status404NotFound,
+                $"The table '{request.TableKey}' could not be found."
+            );
+        }
+
+        var tableName = entityType.GetTableName() ?? entityType.DisplayName();
+        var schema = entityType.GetSchema();
+        var tableKey = TableKeyFactory.Create(schema, tableName);
+        var tableIdentifier = StoreObjectIdentifier.Table(tableName, schema);
+        var columns = entityType.GetProperties()
+            .Select(property => new KeyColumn(
+                property,
+                property.GetColumnName(tableIdentifier) ?? property.Name
+            ))
+            .Where(column => column.Property.PropertyInfo != null)
+            .ToList();
+
+        _logger.LogInformation(
+            "Creating {RecordCount} EFStudio records in {TableKey}.",
+            request.Records.Count,
+            tableKey
+        );
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            var createdEntities = new List<object>(request.Records.Count);
+
+            foreach (var record in request.Records)
+            {
+                var entity = Activator.CreateInstance(entityType.ClrType);
+                if (entity == null)
+                {
+                    throw new EFStudioRequestException(
+                        StatusCodes.Status400BadRequest,
+                        $"The table '{tableKey}' could not be created because its entity type cannot be constructed."
+                    );
+                }
+
+                foreach (var column in columns)
+                {
+                    if (column.Property.ValueGenerated == ValueGenerated.OnAdd)
+                    {
+                        continue;
+                    }
+
+                    if (!TryGetJsonValue(record, column.ColumnName, out var jsonValue))
+                    {
+                        if (!column.Property.IsNullable)
+                        {
+                            throw new EFStudioRequestException(
+                                StatusCodes.Status400BadRequest,
+                                $"Create requests for '{tableKey}' must include the required column '{column.ColumnName}'."
+                            );
+                        }
+
+                        continue;
+                    }
+
+                    var converted = ConvertPropertyValue(column, jsonValue, tableKey);
+                    column.Property.PropertyInfo!.SetValue(entity, converted);
+                }
+
+                createdEntities.Add(entity);
+                dbContext.Add(entity);
+            }
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
+            return new CreateRecordsResponseContract(
+                tableKey,
+                createdEntities.Count,
+                createdEntities.Select(entity => SerializeEntity(entity, columns)).ToList()
+            );
+        }
+        catch (EFStudioRequestException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+        catch (DbUpdateException exception)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            _logger.LogWarning(
+                exception,
+                "Create failed for EFStudio table {TableKey}.",
+                tableKey
+            );
+
+            throw new EFStudioRequestException(
+                StatusCodes.Status409Conflict,
+                $"EFStudio could not create records in '{tableKey}'. Check that all values are valid and foreign key references exist."
+            );
+        }
+        catch (InvalidOperationException exception)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            _logger.LogWarning(
+                exception,
+                "Create validation failed for EFStudio table {TableKey}.",
+                tableKey
+            );
+
+            throw new EFStudioRequestException(
+                StatusCodes.Status409Conflict,
+                $"EFStudio could not create records in '{tableKey}'. Check that all values are valid."
+            );
+        }
+    }
+
     public async Task<TableDataResponseContract?> GetTableDataAsync(
         DbContext dbContext,
         TableDataRequestContract request,
@@ -461,7 +602,7 @@ public class DataService : IDataService
         string tableKey
     )
     {
-        if (!keyValues.TryGetValue(keyColumn.ColumnName, out var jsonValue))
+        if (!TryGetJsonValue(keyValues, keyColumn.ColumnName, out var jsonValue))
         {
             throw new EFStudioRequestException(
                 StatusCodes.Status400BadRequest,
@@ -535,6 +676,41 @@ public class DataService : IDataService
     }
 
     private sealed record KeyColumn(IProperty Property, string ColumnName);
+
+    private static bool TryGetJsonValue(
+        IReadOnlyDictionary<string, JsonElement> values,
+        string columnName,
+        out JsonElement jsonValue
+    )
+    {
+        if (values.TryGetValue(columnName, out jsonValue))
+        {
+            return true;
+        }
+
+        foreach (var pair in values)
+        {
+            if (string.Equals(pair.Key, columnName, StringComparison.OrdinalIgnoreCase))
+            {
+                jsonValue = pair.Value;
+                return true;
+            }
+        }
+
+        jsonValue = default;
+        return false;
+    }
+
+    private static IReadOnlyDictionary<string, object?> SerializeEntity(
+        object entity,
+        IReadOnlyList<KeyColumn> columns
+    )
+    {
+        return columns.ToDictionary(
+            column => column.ColumnName,
+            column => column.Property.GetGetter().GetClrValue(entity)
+        );
+    }
 
     private static List<IReadOnlyDictionary<string, object?>> ApplyFilter(
         IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,

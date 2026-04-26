@@ -154,6 +154,45 @@ public sealed class StudioServer
             }
         );
 
+        app.MapPost(
+            "/efstudio/api/data",
+            async (HttpContext httpContext, ITargetHost host) =>
+            {
+                try
+                {
+                    var request = await httpContext.Request.ReadFromJsonAsync<CreateRecordsRequestContract>(
+                        JsonOptions,
+                        httpContext.RequestAborted
+                    );
+
+                    if (request == null)
+                    {
+                        return Results.BadRequest(
+                            new ErrorResponseContract("Provide a create request before creating records.")
+                        );
+                    }
+
+                    var result = await host.CreateRecordsAsync(
+                        GetContextName(httpContext),
+                        request,
+                        httpContext.RequestAborted
+                    );
+
+                    return Results.Json(result, JsonOptions);
+                }
+                catch (JsonException)
+                {
+                    return Results.BadRequest(
+                        new ErrorResponseContract("Provide a valid create request before creating records.")
+                    );
+                }
+                catch (Exception exception)
+                {
+                    return ToErrorResult(exception);
+                }
+            }
+        );
+
         app.MapPut(
             "/efstudio/api/data",
             async (HttpContext httpContext, ITargetHost host) =>
@@ -261,6 +300,15 @@ public sealed class StudioServer
                 new ErrorResponseContract(hostException.Message),
                 JsonOptions,
                 statusCode: hostException.StatusCode
+            );
+        }
+
+        if (effectiveException is EFStudioRequestException requestException)
+        {
+            return Results.Json(
+                new ErrorResponseContract(requestException.Message),
+                JsonOptions,
+                statusCode: requestException.StatusCode
             );
         }
 

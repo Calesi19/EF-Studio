@@ -13,6 +13,7 @@ export function StudioContent() {
     activeTab,
     activeTabId,
     activeTableError,
+    activeTableCreateError,
     activeTableUpdateError,
     closeAllTabs,
     closeTab,
@@ -75,6 +76,11 @@ export function StudioContent() {
           {activeTableUpdateError ? (
             <div className="mx-3 mt-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
               {activeTableUpdateError}
+            </div>
+          ) : null}
+          {activeTableCreateError ? (
+            <div className="mx-3 mt-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              {activeTableCreateError}
             </div>
           ) : null}
           {tableLoadErrors.length > 0 && !tableErrorsDismissed ? (

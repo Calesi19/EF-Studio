@@ -1,4 +1,4 @@
-import type { TableDef } from "@/types";
+import type { ColumnDef, TableDef } from "@/types";
 
 const userIds = [
   "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -42,19 +42,27 @@ const orderIds = Array.from({ length: 15 }, (_, i) =>
   `cc${String(i + 1).padStart(6, "0")}-0000-0000-0000-${String(i + 1).padStart(12, "0")}`
 );
 
+function withCreateMetadata(columns: Omit<ColumnDef, "isGeneratedOnAdd" | "isEditableOnCreate">[]): ColumnDef[] {
+  return columns.map((column) => ({
+    ...column,
+    isGeneratedOnAdd: false,
+    isEditableOnCreate: true,
+  }));
+}
+
 export const MOCK_TABLES: TableDef[] = [
   {
     key: "User",
     name: "User",
     displayName: "Users",
     modelDisplayName: "Users",
-    columns: [
+    columns: withCreateMetadata([
       { name: "id", type: "uuid", isPrimaryKey: true, isForeignKey: false, isNullable: false },
       { name: "name", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
       { name: "email", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
       { name: "createdAt", type: "datetime", isPrimaryKey: false, isForeignKey: false, isNullable: false },
       { name: "isActive", type: "boolean", isPrimaryKey: false, isForeignKey: false, isNullable: false },
-    ],
+    ]),
     rows: [
       { id: userIds[0], name: "Alice Johnson", email: "alice@example.com", createdAt: "2024-01-15T09:00:00", isActive: true },
       { id: userIds[1], name: "Bob Smith", email: "bob@example.com", createdAt: "2024-01-20T11:30:00", isActive: true },
@@ -75,13 +83,13 @@ export const MOCK_TABLES: TableDef[] = [
     name: "Post",
     displayName: "Posts",
     modelDisplayName: "Posts",
-    columns: [
+    columns: withCreateMetadata([
       { name: "id", type: "uuid", isPrimaryKey: true, isForeignKey: false, isNullable: false },
       { name: "title", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
       { name: "content", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
       { name: "authorId", type: "uuid", isPrimaryKey: false, isForeignKey: true, isNullable: false, foreignKeyTable: "User" },
       { name: "publishedAt", type: "datetime", isPrimaryKey: false, isForeignKey: false, isNullable: true },
-    ],
+    ]),
     rows: [
       { id: postIds[0], title: "Getting Started with EF Core", content: "Entity Framework Core is a modern ORM...", authorId: userIds[0], publishedAt: "2024-01-20T10:00:00" },
       { id: postIds[1], title: "Migrations Deep Dive", content: "Database migrations allow you to...", authorId: userIds[0], publishedAt: "2024-02-01T09:00:00" },
@@ -110,11 +118,11 @@ export const MOCK_TABLES: TableDef[] = [
     name: "Tag",
     displayName: "Tags",
     modelDisplayName: "Tags",
-    columns: [
+    columns: withCreateMetadata([
       { name: "id", type: "number", isPrimaryKey: true, isForeignKey: false, isNullable: false },
       { name: "name", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
       { name: "color", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
-    ],
+    ]),
     rows: [
       { id: 1, name: "dotnet", color: "#512BD4" },
       { id: 2, name: "efcore", color: "#68217A" },
@@ -138,7 +146,7 @@ export const MOCK_TABLES: TableDef[] = [
     name: "Order",
     displayName: "Orders",
     modelDisplayName: "Orders",
-    columns: [
+    columns: withCreateMetadata([
       { name: "id", type: "uuid", isPrimaryKey: true, isForeignKey: false, isNullable: false },
       { name: "orderNumber", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
       { name: "status", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: false },
@@ -163,7 +171,7 @@ export const MOCK_TABLES: TableDef[] = [
       { name: "notes", type: "string", isPrimaryKey: false, isForeignKey: false, isNullable: true },
       { name: "createdAt", type: "datetime", isPrimaryKey: false, isForeignKey: false, isNullable: false },
       { name: "updatedAt", type: "datetime", isPrimaryKey: false, isForeignKey: false, isNullable: false },
-    ],
+    ]),
     rows: [
       { id: orderIds[0], orderNumber: "ORD-00001", status: "delivered", customerId: userIds[0], billingName: "Alice Johnson", billingEmail: "alice@example.com", billingAddress: "123 Main St", billingCity: "New York", billingCountry: "US", billingZip: "10001", subtotal: 120.00, taxAmount: 10.80, discountAmount: null, total: 130.80, currency: "USD", paymentMethod: "card", paymentReference: "ch_abc123", isPaid: true, isShipped: true, shippedAt: "2024-02-01T09:00:00", deliveredAt: "2024-02-04T14:00:00", notes: null, createdAt: "2024-01-30T10:00:00", updatedAt: "2024-02-04T14:00:00" },
       { id: orderIds[1], orderNumber: "ORD-00002", status: "shipped", customerId: userIds[1], billingName: "Bob Smith", billingEmail: "bob@example.com", billingAddress: "456 Oak Ave", billingCity: "Chicago", billingCountry: "US", billingZip: "60601", subtotal: 89.99, taxAmount: 8.10, discountAmount: 5.00, total: 93.09, currency: "USD", paymentMethod: "paypal", paymentReference: "pp_xyz789", isPaid: true, isShipped: true, shippedAt: "2024-02-10T11:00:00", deliveredAt: null, notes: "Leave at door", createdAt: "2024-02-08T15:00:00", updatedAt: "2024-02-10T11:00:00" },
@@ -187,10 +195,10 @@ export const MOCK_TABLES: TableDef[] = [
     name: "PostTag",
     displayName: "Post Tags",
     modelDisplayName: "Post Tags",
-    columns: [
+    columns: withCreateMetadata([
       { name: "postId", type: "uuid", isPrimaryKey: false, isForeignKey: true, isNullable: false, foreignKeyTable: "Post" },
       { name: "tagId", type: "number", isPrimaryKey: false, isForeignKey: true, isNullable: false, foreignKeyTable: "Tag" },
-    ],
+    ]),
     rows: [
       { postId: postIds[0], tagId: 1 },
       { postId: postIds[0], tagId: 2 },

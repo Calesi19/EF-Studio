@@ -5,6 +5,12 @@ namespace EFStudio.Core.Services;
 
 public interface IDataService
 {
+    Task<CreateRecordsResponseContract> CreateRecordsAsync(
+        DbContext dbContext,
+        CreateRecordsRequestContract request,
+        CancellationToken cancellationToken
+    );
+
     Task<TableDataResponseContract?> GetTableDataAsync(
         DbContext dbContext,
         TableDataRequestContract request,

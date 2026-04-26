@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Net.Sockets;
 using System.Text.Json;
 using EFStudio.Server;
@@ -81,6 +82,50 @@ public class StudioServerApiTests : TestDatabaseBase
     }
 
     [Fact]
+    public async Task Server_ShouldCreateRowsViaPostDataEndpoint()
+    {
+        await using var handle = await StartServerAsync();
+        using var client = new HttpClient();
+
+        var request = new
+        {
+            tableKey = "Users",
+            records = new[]
+            {
+                new
+                {
+                    Name = "Ada Lovelace",
+                    Email = "ada@example.com",
+                    IsActive = true,
+                    CreatedAtUtc = "2026-04-24T12:00:00Z",
+                    CreditLimit = 1500.75m,
+                },
+                new
+                {
+                    Name = "Grace Hopper",
+                    Email = "grace@example.com",
+                    IsActive = false,
+                    CreatedAtUtc = "2026-04-24T13:00:00Z",
+                    CreditLimit = 2100.50m,
+                },
+            },
+        };
+
+        var response = await client.PostAsJsonAsync(new Uri(handle.StudioUri, "api/data"), request);
+
+        response.EnsureSuccessStatusCode();
+
+        var payload = await response.Content.ReadAsStringAsync();
+        var createResponse = JsonSerializer.Deserialize<CreateRecordsResponse>(payload, JsonOptions);
+
+        Assert.NotNull(createResponse);
+        Assert.Equal("Users", createResponse.TableKey);
+        Assert.Equal(2, createResponse.CreatedCount);
+        Assert.Equal(2, createResponse.Records.Count);
+        Assert.All(createResponse.Records, row => Assert.True(GetJsonValue(row, "id", "Id").GetInt32() > 0));
+    }
+
+    [Fact]
     public async Task Server_ShouldReturnNotFoundForUnknownTable()
     {
         await using var handle = await StartServerAsync();
@@ -151,6 +196,12 @@ public class StudioServerApiTests : TestDatabaseBase
         int PageSize,
         int TotalRows,
         List<Dictionary<string, JsonElement>> Rows
+    );
+
+    private sealed record CreateRecordsResponse(
+        string TableKey,
+        int CreatedCount,
+        List<Dictionary<string, JsonElement>> Records
     );
 
     private sealed record ErrorResponse(string Message);
