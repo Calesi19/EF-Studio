@@ -33,7 +33,7 @@ From the project directory that contains your EF Core app:
 dotnet efstudio
 ```
 
-<p class="note">EFStudio hosts a local studio at <code>/efstudio</code> on a localhost URL such as <code>http://127.0.0.1:5123/efstudio</code>.</p>
+<p class="note">EFStudio hosts a local studio at <code>/efstudio</code> on a localhost URL such as <code>http://localhost:5123/efstudio</code>.</p>
 
 ## Common options
 
