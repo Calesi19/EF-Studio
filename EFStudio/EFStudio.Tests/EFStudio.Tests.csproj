@@ -27,6 +27,9 @@
     <ProjectReference Include="..\EFStudio.Core\EFStudio.Core.csproj" />
     <ProjectReference Include="..\EFStudio.Server\EFStudio.Server.csproj" />
     <ProjectReference Include="..\EFStudio.Sample\EFStudio.Sample.csproj" />
+    <ProjectReference Include="..\EFStudio.Tool\EFStudio.Tool.csproj">
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+    </ProjectReference>
   </ItemGroup>
 
 </Project>

@@ -58,7 +58,11 @@ function mapColumnType(dataType: string): ColumnType {
     return "datetime";
   }
 
-  if (normalized.includes("uuid") || normalized.includes("guid")) {
+  if (
+    normalized.includes("uuid") ||
+    normalized.includes("guid") ||
+    normalized === "uniqueidentifier"
+  ) {
     return "uuid";
   }
 
