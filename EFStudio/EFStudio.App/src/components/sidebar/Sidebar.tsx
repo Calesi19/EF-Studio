@@ -96,7 +96,7 @@ export function Sidebar({
           {hasSchemaGroups
             ? orderedGroups.map(([schemaName, schemaTables]) => (
                 <section key={schemaName} className="space-y-1">
-                  <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  <div className="truncate px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                     {schemaName}
                   </div>
                   <div className="space-y-px">
