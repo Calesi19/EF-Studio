@@ -34,6 +34,10 @@ jobs:
         working-directory: ./EFStudio/EFStudio.App
         run: npm run build
 
+      - name: Test Frontend
+        working-directory: ./EFStudio/EFStudio.App
+        run: npm test -- --run
+
       # 2. Restore and Build .NET
       - name: Restore dependencies
         run: dotnet restore EFStudio/EFStudio.sln
