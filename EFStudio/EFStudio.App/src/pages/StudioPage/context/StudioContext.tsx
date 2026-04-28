@@ -26,7 +26,7 @@ type StudioContextType = {
   selectedTable: TableDef | null;
   currentRows: TableDef["rows"];
   currentTotalRows: number;
-  currentTotalPages: number;
+  currentTotalPages: number | undefined;
   effectiveSidebarOpen: boolean;
   tableLoadErrors: { tableKey: string; tableName: string; message: string }[];
   activeTableError: string | null;
@@ -162,7 +162,10 @@ export function StudioContextProvider({ children }: { children: ReactNode }) {
   const activeTableQuery = activeTab ? tableDataMap.get(activeTab.id) : undefined;
   const currentRows = activeTableQuery?.data?.rows ?? [];
   const currentTotalRows = activeTableQuery?.data?.totalRows ?? 0;
-  const currentTotalPages = activeTableQuery?.data?.totalPages ?? 1;
+  const currentTotalPages =
+    activeTableQuery?.isPlaceholderData || !activeTableQuery?.data
+      ? undefined
+      : activeTableQuery.data.totalPages;
   const effectiveSidebarOpen = tabs.length === 0 ? true : sidebarOpen;
   const activeTableError = activeTableQuery?.error ? toErrorMessage(activeTableQuery.error) : null;
   const activeTableLoading =

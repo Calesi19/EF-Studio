@@ -32,7 +32,7 @@ interface DataTableProps {
   columns: ColumnDef[];
   rows: RecordRow[];
   totalRows: number;
-  totalPages: number;
+  totalPages: number | undefined;
   filter: string;
   sort: SortState;
   pagination: PaginationState;

@@ -13,7 +13,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 interface DataTablePaginationProps {
   pagination: PaginationState;
   totalRows: number;
-  totalPages: number;
+  totalPages: number | undefined;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
 }
@@ -72,13 +72,13 @@ export function DataTablePagination({
             ‹
           </Button>
           <span className="px-2 text-xs text-muted-foreground">
-            {pagination.page} / {totalPages}
+            {pagination.page} / {totalPages ?? "–"}
           </span>
           <Button
             variant="outline"
             size="sm"
             className="h-7 w-7 p-0 text-xs"
-            disabled={pagination.page >= totalPages}
+            disabled={totalPages === undefined || pagination.page >= totalPages}
             onClick={() => onPageChange(pagination.page + 1)}
           >
             ›
@@ -87,8 +87,8 @@ export function DataTablePagination({
             variant="outline"
             size="sm"
             className="h-7 w-7 p-0 text-xs"
-            disabled={pagination.page >= totalPages}
-            onClick={() => onPageChange(totalPages)}
+            disabled={totalPages === undefined || pagination.page >= totalPages}
+            onClick={() => totalPages !== undefined && onPageChange(totalPages)}
           >
             »
           </Button>
