@@ -51,7 +51,7 @@ internal sealed class TargetHost : ITargetHost
         }
 
         _registrations = contextTypes
-            .Select(contextType => CreateRegistration(contextType, factoryTypes, startupServices, startupError))
+            .Select(contextType => CreateRegistration(contextType, factoryTypes, startupServices, startupError, startupProject.ProjectDirectory))
             .ToList();
 
         var availableContexts = _registrations.Where(registration => registration.ActivationError == null).ToList();
@@ -221,7 +221,8 @@ internal sealed class TargetHost : ITargetHost
         Type contextType,
         IReadOnlyList<Type> factoryTypes,
         IServiceProvider? startupServices,
-        string? startupError
+        string? startupError,
+        string projectDirectory
     )
     {
         var contextName = contextType.Name;
@@ -247,12 +248,23 @@ internal sealed class TargetHost : ITargetHost
                             $"EFStudio could not find CreateDbContext on '{factoryType.FullName}'."
                         );
 
-                    var context = createMethod.Invoke(factory, new object[] { Array.Empty<string>() })
-                        ?? throw new InvalidOperationException(
-                            $"EFStudio could not create '{contextName}' through '{factoryType.FullName}'."
-                        );
-
-                    return new DbContextLease((DbContext)context);
+                    // Set working directory to the project directory so that design-time
+                    // factories using Directory.GetCurrentDirectory() to find appsettings.json
+                    // resolve correctly, matching EF Core CLI tool behavior.
+                    var previousDirectory = Directory.GetCurrentDirectory();
+                    try
+                    {
+                        Directory.SetCurrentDirectory(projectDirectory);
+                        var context = createMethod.Invoke(factory, new object[] { Array.Empty<string>() })
+                            ?? throw new InvalidOperationException(
+                                $"EFStudio could not create '{contextName}' through '{factoryType.FullName}'."
+                            );
+                        return new DbContextLease((DbContext)context);
+                    }
+                    finally
+                    {
+                        Directory.SetCurrentDirectory(previousDirectory);
+                    }
                 },
                 null
             );
