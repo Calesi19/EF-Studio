@@ -49,12 +49,26 @@ internal sealed class TargetAssemblyContext : AssemblyLoadContext
             return null;
         }
 
-        if (assemblyName.Name?.StartsWith("Microsoft.Extensions.Configuration", StringComparison.Ordinal) != true)
+        if (assemblyName.Name?.StartsWith("Microsoft.Extensions.", StringComparison.Ordinal) != true)
         {
             return null;
         }
 
-        return _workerResolver.ResolveAssemblyToPath(assemblyName);
+        var path = _workerResolver.ResolveAssemblyToPath(assemblyName);
+        if (path != null)
+        {
+            return path;
+        }
+
+        // Shared-framework Microsoft.Extensions.* assemblies (e.g. FileProviders, Configuration.FileExtensions)
+        // are not listed in any deps.json so neither resolver can find them by path. The default
+        // context has them loaded from the runtime directory — use that same physical path
+        // here so that when the assembly resolves its interfaces it goes through
+        // this context's Load(), picking up the isolated NuGet copies and keeping type
+        // identities consistent.
+        return AssemblyLoadContext.Default.Assemblies
+            .FirstOrDefault(a => string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.OrdinalIgnoreCase))
+            ?.Location;
     }
 
     private static bool ShouldUseDefaultContext(AssemblyName assemblyName)
